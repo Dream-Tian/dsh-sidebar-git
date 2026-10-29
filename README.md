@@ -1,34 +1,38 @@
 # dsh-sidebar-git
 
-在 DeepSeek Harness 的右侧栏里查看**当前会话工作区**的 Git 改动和提交历史。仿 VS Code 源码管理面板，但把改动列表、提交树和 diff 收进了同一列，适合在写代码时随手看一眼仓库状态。
+在 DeepSeek Harness 的右侧栏里查看并操作**当前会话工作区**的 Git 仓库。仿 VS Code 源码管理面板：改动列表、暂存与提交、提交树、分支同步和 diff 都在同一列里。
 
-当前版本是只读的：不会执行暂存、提交、推送或任何会改动仓库的操作。
+写操作会直接作用于工作区。丢弃改动这种不可撤销的操作会有二次确认。
 
-## 界面
+## 功能
 
-```
-┌────────────────────────────────────┐
-│  Git   main  ↑1 ↓0              ⟳  │
-├────────────────────────────────────┤
-│  更改  5                  +12 -3   │
-│  JS  app.js   src          +4 -1  M│
-│  {}  package.json          +1 -0  M│
-│  #   theme.css  src        +7 -2  M│
-├────────────── 拖动 ────────────────┤
-│  提交  12                          │
-│  ● feat: add panel        abc1234  │
-│  ● fix: splitter          def5678  │
-│  ● Merge branch 'main'    9876543  │
-└────────────────────────────────────┘
-```
+**改动**
+- 按「暂存的更改 / 更改」分组，单行显示文件名、目录、文件类型图标、`+N -N` 和状态字母（`M` `A` `D` `R` `U` `!`）。
+- 每行悬停出现 `+` / `−` 暂存或取消暂存；分区标题有全部暂存 / 全部取消暂存。
+- 支持按路径过滤。
+- 右键菜单：查看差异、暂存/取消暂存、复制路径、在 Finder 中显示、丢弃改动（未跟踪文件是删除文件，都会二次确认）。
 
-- **上半区**：工作区改动。单行显示文件名和目录，前面是文件类型图标，右侧是 `+N -N` 和状态字母（`M` 修改、`A` 新增、`D` 删除、`R` 重命名、`U` 未跟踪、`!` 冲突）。
-- **下半区**：提交树。lane 连线的分支图、短 hash、`HEAD -> main` / `origin/main` / tag 徽标；合并提交会画出多条父边。
-- **中间分割条**：上下拖动调整两栏高度，比例按会话记住（也可以聚焦后按 ↑/↓ 微调）。
-- **点文件**：在面板内打开这个文件的统一 diff——双行号、红绿高亮、hunk 头，顶部可以返回、打开文件预览、重新读取差异。
-- **点提交**：展开该提交改动过的文件列表（带状态和增删行数），再点一次收起；提交里的文件也能查看该提交的 diff。
-- 顶部显示当前分支、ahead/behind 和刷新按钮；标签页可见时每 8 秒自动刷新。
-- 文案跟随 Harness 界面语言（简体中文 / English），界面颜色使用 Harness 主题 token（分支连线与文件图标的配色除外），亮色和暗色主题都适配。
+**提交**
+- 底部提交信息框，`Cmd/Ctrl+Enter` 提交已暂存内容；提交后自动刷新。
+- 提交树显示 lane 分支图、短 hash、`HEAD -> main` / `origin/main` / tag 徽标，合并提交画出多条父边。
+- 点提交展开该提交的文件列表（状态 + 增删行数），再点收起。
+- 支持「加载更多」和按消息/作者/hash 搜索已加载的提交。
+
+**仓库、分支与同步**
+- 顶部文件夹按钮切换仓库：当前会话目录、最近 8 个仓库、手动输入路径；每个会话记住自己的选择。
+- 点分支名打开分支菜单：切换本地分支、新建分支、Fetch、Pull（`--ff-only`）、Push。
+- ahead/behind 数字可以直接点：`↑` 推送，`↓` 拉取。
+
+**Diff**
+- 点文件在面板内打开统一 diff：双行号、红绿行、hunk 头、词级高亮。
+- 工具栏可切换「并排 / 统一」「只看改动」「语法高亮」；选项全局记住。
+- 点行号在侧栏文件预览里打开对应行（文件在当前会话工作区内时）。
+- 未跟踪文件会合成为「全部新增」的 diff；删除、重命名、二进制、过大文件都有单独提示。
+
+**其它**
+- 上下两栏可拖动分割，比例按会话记住。
+- 标签页可见时每 8 秒自动刷新，也可以手动刷新。
+- 中文 / English 跟随 Harness 界面语言，颜色使用主题 token，亮暗主题都适配。
 
 ## 环境要求
 
@@ -42,7 +46,7 @@
 
 **方式一：从 GitHub 安装（推荐）**
 
-在 Harness 的插件管理页（侧边栏的插件入口）选择安装，填入：
+在 Harness 的插件管理页选择安装，填入：
 
 ```
 github:Dream-Tian/dsh-sidebar-git
@@ -52,13 +56,11 @@ github:Dream-Tian/dsh-sidebar-git
 
 **方式二：从本地目录安装**
 
-适合边改边用：
-
 ```bash
 git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 ```
 
-然后在插件管理里安装这个本地目录（绝对路径）。profile 里会变成：
+在插件管理里安装这个本地目录（绝对路径）。profile 里会变成：
 
 ```json
 "dependencies": { "dsh-sidebar-git": "link:/path/to/dsh-sidebar-git" }
@@ -72,9 +74,28 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 
 ## 使用
 
-1. 打开一个**工作目录在 Git 仓库里**的会话（在仓库子目录里也可以，会自动向上找仓库根）。
+1. 打开一个**工作目录在 Git 仓库里**的会话（子目录也可以，会自动向上找仓库根）。
 2. 在开始页点 **Git** 卡片，或从右侧栏的标签添加入口打开指南页再选 Git。
-3. 如果当前目录不是 Git 仓库，面板会直接提示，不会报错。
+3. 当前目录不是仓库时会直接提示；点文件夹按钮可以换一个仓库路径。
+
+### 暂存与提交
+
+- 悬停文件行点 `+` 暂存，点 `−` 取消暂存；分区标题右侧的 `+` / `−` 作用于全部。
+- 暂存后在底部写提交信息，点「提交」或按 `Cmd/Ctrl+Enter`。没有暂存内容或信息为空时按钮不可用。
+- 提交使用 Host 的 git 身份配置；没有配置时会显示 git 的报错。
+
+### 分支与同步
+
+- 点分支名：菜单里列出本地分支（当前分支带 ✓），点其它分支切换；输入名字后「新建分支」会创建并切过去。
+- 菜单底部是 Fetch / Pull / Push；Pull 只做 fast-forward，不自动合并。
+- 当前分支没有 upstream 时，Push 会自动执行 `git push -u origin <branch>`。
+- 工作区有未提交改动时，切换分支是否成功由 git 决定，失败信息会显示出来。
+
+### 右键菜单
+
+- **丢弃改动**：已跟踪文件恢复到 `HEAD`（同时清掉暂存区），未跟踪文件直接删除。都会弹出确认框，不可撤销。
+- **在 Finder 中显示**：macOS 用 `open -R`，Windows 用资源管理器，Linux 用 `xdg-open`。
+- **复制路径**：复制仓库内绝对路径。
 
 ### diff 的细节
 
@@ -82,22 +103,25 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 - 未跟踪文件：Host 读取文件内容，合成为“全部新增”的 diff。
 - 删除的文件：显示为全部删除；重命名但内容没变时提示“只有元数据变更”。
 - 提交详情里的文件：对比该提交的第一个父提交。
+- 词级高亮只对成对的删除/新增行做公共前缀/后缀标记；并排视图按顺序配对删除与新增行。
+- 语法高亮是轻量的逐行 token 着色（注释、字符串、数字、关键字），多行字符串/跨行注释可能不准确，可以关掉。
 - 二进制文件、空 diff、文件过大都有单独提示；Host 最多返回 512 KB diff（未跟踪文件超过 256 KB 不合成），前端最多渲染 4000 行。
 
 ## 工作方式
 
-- **Host 半**（`host.js`）：通过 Connection 注册三个需要浏览器认证的精确路由：
-  - `POST /api/git-panel/snapshot` — 仓库根、分支、改动文件、提交列表
-  - `POST /api/git-panel/commit` — 某个提交改动过的文件
-  - `POST /api/git-panel/diff` — 某个文件的统一 diff
-- **Git 采集**（`git.js`）：只调用 `rev-parse`、`status`、`log`、`diff`、`show`，全部只读；有超时、输出大小、文件数/提交数上限；路径拒绝绝对路径、`..` 和 NUL，diff 使用 `--literal-pathspecs`，未跟踪文件用 `realpath` 校验是否仍在仓库内。
+- **Host 半**（`host.js`）：通过 Connection 注册需要浏览器认证的精确路由：
+  - 读：`snapshot`、`commit`、`diff`、`branches`
+  - 写：`stage`、`unstage`、`commit-create`、`discard`、`reveal`、`branch`、`sync`
+  - 写操作在 Host 内串行执行，避免并发操作 git index；丢弃改动由客户端二次确认。
+- **Git 操作**（`git.js`）：读操作使用 `rev-parse`、`status`、`log`、`diff`、`show`；写操作使用 `add`、`restore`、`rm --cached`、`commit`、`switch`、`fetch`、`pull --ff-only`、`push`。没有 shell 拼接，全部走参数数组。
+- **路径与参数**：拒绝绝对路径、`..`、NUL 和路径魔术（`--literal-pathspecs`）；未跟踪文件操作前用 `realpath` 确认仍在仓库内；分支名限制为安全的 ASCII 字符集。
 - **Client 半**（`client.js`）：通过 `ctx.sidebarRightTabs` 注册 `gitpanel` 类型和开始页卡片，在 `sidebar.right.pane.tab` 里渲染 React 组件；不依赖任何 Harness Client 包，只使用 `--dsw-alias-*` 主题 token。
 
 ```
 .
-├── host.js            # Host 半：注册 /api 路由，参数校验
-├── git.js             # 只读 Git 采集（status / log / numstat / show / diff）
-├── client.js          # Client 半：侧栏类型、改动列表、提交树、diff 视图
+├── host.js            # Host 半：/api 路由、参数校验、写操作串行
+├── git.js             # Git 读写操作（status / log / numstat / show / diff / add / commit / branch / sync）
+├── client.js          # Client 半：改动列表、提交框、提交树、diff、分支与仓库菜单
 ├── cordis.patch.yml   # bundle 挂载行（id: git-tab）
 ├── package.json
 ├── icon.svg
@@ -108,17 +132,21 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 
 ## 已知限制
 
-- 只跟随会话的工作目录，没有独立的“选择仓库”入口。
-- 只读：不能暂存、提交、切分支或推送。
-- 没有语法高亮，diff 是纯文本着色；超长行需要横向滚动。
-- 文件类型图标按扩展名映射，未覆盖的扩展名使用通用文档图标。
+- 写操作直接作用于工作区，没有额外的「只读模式」开关；丢弃改动确认后不可撤销。
+- 只能按文件暂存，不能按 hunk/行暂存。
+- Pull 只支持 fast-forward；没有 merge、rebase、force push、cherry-pick 等操作。
+- 分支名限制为字母、数字和 `._/-`，不支持空格或非 ASCII 分支名。
+- 语法高亮和并排视图都是轻量实现：逐行 token、按顺序配对删除/新增行，不保证与完整 diff 算法一致。
+- 仓库选在会话工作区之外时，diff 和提交仍可用，但「打开文件」和「点行号打开」不可用（文件预览按会话工作区解析）。
 - 合并提交的文件列表和 diff 都以第一个父提交为基准。
+- 文件类型图标按扩展名映射，未覆盖的扩展名使用通用文档图标。
+- 没有 stash、blame、submodule 或冲突解决界面。
 
 ## 开发
 
 - 改 `client.js` 后，在插件管理里重新应用一次 bundle（或重启 Harness）即可重建浏览器端模块。
 - 改 `host.js` / `git.js` 后同样通过插件管理重新加载；已链接的本地包会在 profile 重新组合时替换模块，不需要重启进程。
-- 样式只用主题 token，新增颜色请优先使用 `--dsw-alias-*`；文件类型图标的颜色属于图标本身，可以保留字面值。
+- 样式只用主题 token，新增颜色请优先使用 `--dsw-alias-*`；文件类型图标和语法 token 的颜色属于内容配色，可以保留字面值。
 
 ## 反馈
 

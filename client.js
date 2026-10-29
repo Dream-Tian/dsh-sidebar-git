@@ -18,6 +18,11 @@ window.__ModuleLoader__.load({
     const DEFAULT_SPLIT = 0.64
     /** Per-session storage key for the dragged split. */
     const SPLIT_PREFIX = 'dsh.gitPanel.split.v2.'
+    /** Per-session repository override and the shared recent list. */
+    const REPO_KEY_PREFIX = 'dsh.gitPanel.repo.v1.'
+    const RECENT_REPOS_KEY = 'dsh.gitPanel.recentRepos.v1'
+    /** Diff view preferences, shared by every tab. */
+    const DIFF_OPTIONS_KEY = 'dsh.gitPanel.diffOptions.v1'
     /** Stable empty list so the detail memo does not churn. */
     const NO_FILES = []
     /** Diff lines rendered before the view stops adding rows. */
@@ -56,6 +61,56 @@ window.__ModuleLoader__.load({
       commitLoading: '正在读取提交…',
       commitError: '读取提交失败：{message}',
       commitEmpty: '这个提交没有文件改动。',
+      stage: '暂存',
+      unstage: '取消暂存',
+      stageAll: '全部暂存',
+      unstageAll: '全部取消暂存',
+      stagedGroup: '暂存的更改',
+      unstagedGroup: '更改',
+      commitPlaceholder: '提交信息（Ctrl+Enter 提交）',
+      commit: '提交',
+      committing: '提交中…',
+      stagedCount: '已暂存 {count} 个文件',
+      commitNoMessage: '先写提交信息',
+      commitNothingStaged: '先暂存要提交的更改',
+      commitDone: '已提交 {short}',
+      writeError: '操作失败：{message}',
+      filterFiles: '过滤文件…',
+      searchCommits: '搜索提交…',
+      loadMore: '加载更多提交',
+      loadingMore: '加载中…',
+      noMatches: '没有匹配项',
+      repository: '仓库',
+      useSessionDir: '使用会话目录',
+      recentRepos: '最近的仓库',
+      repoPathPlaceholder: '输入仓库路径…',
+      openRepo: '打开',
+      chooseRepo: '选择仓库',
+      viewDiff: '查看差异',
+      copyPath: '复制路径',
+      reveal: '在 Finder 中显示',
+      discard: '丢弃改动',
+      deleteFile: '删除文件',
+      discardTitle: '丢弃改动？',
+      discardBody: '将丢弃 {path} 的所有未提交改动，此操作不可撤销。',
+      deleteTitle: '删除未跟踪文件？',
+      deleteBody: '将删除 {path}，此操作不可撤销。',
+      cancel: '取消',
+      confirmDiscard: '丢弃',
+      confirmDelete: '删除',
+      branches: '分支',
+      repoMenu: '仓库',
+      newBranchPlaceholder: '新分支名…',
+      createBranch: '新建分支',
+      fetch: '获取',
+      pull: '拉取',
+      push: '推送',
+      syncing: '同步中…',
+      noBranches: '没有本地分支',
+      splitView: '并排',
+      changesOnly: '只看改动',
+      syntaxHighlight: '语法高亮',
+      openAtLine: '打开第 {line} 行',
       dragHint: '拖动调整上下两栏高度',
     }
 
@@ -92,6 +147,56 @@ window.__ModuleLoader__.load({
       commitLoading: 'Reading commit…',
       commitError: 'Could not read the commit: {message}',
       commitEmpty: 'This commit changed no files.',
+      stage: 'Stage',
+      unstage: 'Unstage',
+      stageAll: 'Stage all',
+      unstageAll: 'Unstage all',
+      stagedGroup: 'Staged Changes',
+      unstagedGroup: 'Changes',
+      commitPlaceholder: 'Commit message (Ctrl+Enter to commit)',
+      commit: 'Commit',
+      committing: 'Committing…',
+      stagedCount: '{count} staged',
+      commitNoMessage: 'Write a commit message first',
+      commitNothingStaged: 'Stage changes to commit',
+      commitDone: 'Committed {short}',
+      writeError: 'Operation failed: {message}',
+      filterFiles: 'Filter files…',
+      searchCommits: 'Search commits…',
+      loadMore: 'Load more commits',
+      loadingMore: 'Loading…',
+      noMatches: 'No matches',
+      repository: 'Repository',
+      useSessionDir: 'Use session directory',
+      recentRepos: 'Recent repositories',
+      repoPathPlaceholder: 'Repository path…',
+      openRepo: 'Open',
+      chooseRepo: 'Choose repository',
+      viewDiff: 'View diff',
+      copyPath: 'Copy path',
+      reveal: 'Reveal in Finder',
+      discard: 'Discard changes',
+      deleteFile: 'Delete file',
+      discardTitle: 'Discard changes?',
+      discardBody: 'All uncommitted changes to {path} will be discarded. This cannot be undone.',
+      deleteTitle: 'Delete untracked file?',
+      deleteBody: '{path} will be deleted. This cannot be undone.',
+      cancel: 'Cancel',
+      confirmDiscard: 'Discard',
+      confirmDelete: 'Delete',
+      branches: 'Branches',
+      repoMenu: 'Repository',
+      newBranchPlaceholder: 'New branch name…',
+      createBranch: 'Create branch',
+      fetch: 'Fetch',
+      pull: 'Pull',
+      push: 'Push',
+      syncing: 'Syncing…',
+      noBranches: 'No local branches',
+      splitView: 'Split',
+      changesOnly: 'Changes only',
+      syntaxHighlight: 'Syntax',
+      openAtLine: 'Open line {line}',
       dragHint: 'Drag to resize the two sections',
     }
 
@@ -159,6 +264,66 @@ window.__ModuleLoader__.load({
         },
         h('path', { d: 'M15 5l-7 7 7 7' }),
         h('path', { d: 'M8 12h12' }),
+      )
+    }
+
+    /** Folder glyph for the repository picker trigger. */
+    function FolderGlyph({ size = 14 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.7,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2.5h8.5A1.5 1.5 0 0 1 21 10v7.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z' }),
+      )
+    }
+
+    /** Small chevron marking the repository picker. */
+    function ChevronGlyph({ size = 10 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 2.2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M6 9l6 6 6-6' }),
+      )
+    }
+
+    /** Magnifier used by the section filters. */
+    function SearchGlyph({ size = 13 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('circle', { cx: 10.5, cy: 10.5, r: 5.5 }),
+        h('path', { d: 'M15 15l4.5 4.5' }),
       )
     }
 
@@ -308,6 +473,101 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Read the persisted diff view preferences.
+     * @returns {{ split: boolean, changesOnly: boolean, syntax: boolean }} options.
+     */
+    function readDiffOptions() {
+      try {
+        if (typeof window === 'undefined' || window.localStorage == null) {
+          return { split: false, changesOnly: false, syntax: true }
+        }
+        const raw = JSON.parse(window.localStorage.getItem(DIFF_OPTIONS_KEY) ?? '{}')
+        return {
+          split: raw !== null && typeof raw === 'object' && raw.split === true,
+          changesOnly: raw !== null && typeof raw === 'object' && raw.changesOnly === true,
+          syntax: raw === null || typeof raw !== 'object' || raw.syntax !== false,
+        }
+      } catch {
+        return { split: false, changesOnly: false, syntax: true }
+      }
+    }
+
+    /**
+     * Persist the diff view preferences.
+     * @param {{ split: boolean, changesOnly: boolean, syntax: boolean }} options - current options.
+     */
+    function writeDiffOptions(options) {
+      try {
+        if (typeof window === 'undefined' || window.localStorage == null) return
+        window.localStorage.setItem(DIFF_OPTIONS_KEY, JSON.stringify(options))
+      } catch {
+        // A blocked storage area only loses the preference.
+      }
+    }
+
+    /**
+     * Read the repository override chosen for one Session.
+     * @param {string} sessionId - current Session.
+     * @returns {string | null} an absolute path, or null for the Session directory.
+     */
+    function readRepoOverride(sessionId) {
+      try {
+        if (typeof window === 'undefined' || window.localStorage == null) return null
+        const value = window.localStorage.getItem(REPO_KEY_PREFIX + sessionId)
+        return typeof value === 'string' && value !== '' ? value : null
+      } catch {
+        return null
+      }
+    }
+
+    /**
+     * Persist or clear one Session's repository override.
+     * @param {string} sessionId - current Session.
+     * @param {string | null} value - absolute path, or null for the default.
+     */
+    function writeRepoOverride(sessionId, value) {
+      try {
+        if (typeof window === 'undefined' || window.localStorage == null) return
+        if (value === null || value === '') window.localStorage.removeItem(REPO_KEY_PREFIX + sessionId)
+        else window.localStorage.setItem(REPO_KEY_PREFIX + sessionId, value)
+      } catch {
+        // A blocked storage area only loses the preference.
+      }
+    }
+
+    /**
+     * Read the shared recent repository list.
+     * @returns {string[]} up to eight absolute paths, most recent first.
+     */
+    function readRecentRepos() {
+      try {
+        if (typeof window === 'undefined' || window.localStorage == null) return []
+        const raw = JSON.parse(window.localStorage.getItem(RECENT_REPOS_KEY) ?? '[]')
+        if (!Array.isArray(raw)) return []
+        return raw.filter((value) => typeof value === 'string' && value !== '').slice(0, 8)
+      } catch {
+        return []
+      }
+    }
+
+    /**
+     * Move one repository to the front of the shared recent list.
+     * @param {string} repoPath - resolved repository root.
+     */
+    function rememberRepo(repoPath) {
+      try {
+        if (typeof window === 'undefined' || window.localStorage == null) return
+        const recent = readRecentRepos()
+        if (recent[0] === repoPath) return
+        const list = recent.filter((value) => value !== repoPath)
+        list.unshift(repoPath)
+        window.localStorage.setItem(RECENT_REPOS_KEY, JSON.stringify(list.slice(0, 8)))
+      } catch {
+        // A blocked storage area only loses the list.
+      }
+    }
+
+    /**
      * Assign every commit a lane and the edges it draws.
      * @param {Array<object>} commits - newest first, parents after children.
      * @returns {{ rows: Array<object>, maxLanes: number }} laid-out rows and the lane count.
@@ -372,9 +632,9 @@ window.__ModuleLoader__.load({
     }
 
     /** Added and removed line counts of one file, VSCode style. */
-    function Stats({ file }) {
-      const added = file.additions === null || file.additions === undefined ? null : Number(file.additions)
-      const deleted = file.deletions === null || file.deletions === undefined ? null : Number(file.deletions)
+    function Stats({ additions, deletions }) {
+      const added = additions === null || additions === undefined ? null : Number(additions)
+      const deleted = deletions === null || deletions === undefined ? null : Number(deletions)
       const showAdd = Number.isFinite(added) && added > 0
       const showDel = Number.isFinite(deleted) && deleted > 0
       if (!showAdd && !showDel) return null
@@ -492,30 +752,54 @@ window.__ModuleLoader__.load({
       )
     }
 
-    /** One single-line file row; clicking it opens the file's unified diff. */
-    function FileRow({ file, onOpen, commitStatus }) {
+    /** One single-line file row; the body opens its diff, the trailing button stages it. */
+    function FileRow({ file, onOpen, onMenu, commitStatus, stats, stageMode, onStage, busy, t }) {
       const letter = commitStatus === undefined ? statusLetter(file) : file.status
       const name = baseName(file.path)
       const directory = dirName(file.path)
+      const stat = stats === undefined ? file : stats === null ? {} : stats
       const label =
         file.origPath === null || file.origPath === undefined ? file.path : file.origPath + ' → ' + file.path
       return h(
-        'button',
+        'div',
         {
-          type: 'button',
           className: 'dshgit-row',
           title: label,
-          onClick: () => onOpen(file),
+          onContextMenu:
+            onMenu === undefined
+              ? undefined
+              : (event) => {
+                  event.preventDefault()
+                  onMenu(event, file)
+                },
         },
         h(
-          'span',
-          { className: 'dshgit-path' },
-          h(FileIcon, { filePath: file.path }),
-          h('span', { className: 'dshgit-name' }, name),
-          directory === '' ? null : h('span', { className: 'dshgit-dir' }, directory),
+          'button',
+          { type: 'button', className: 'dshgit-rowmain', onClick: () => onOpen(file) },
+          h(
+            'span',
+            { className: 'dshgit-path' },
+            h(FileIcon, { filePath: file.path }),
+            h('span', { className: 'dshgit-name' }, name),
+            directory === '' ? null : h('span', { className: 'dshgit-dir' }, directory),
+          ),
+          h(Stats, { additions: stat.additions, deletions: stat.deletions }),
+          h('span', { className: 'dshgit-status', 'data-s': letter, title: letter }, letter),
         ),
-        h(Stats, { file }),
-        h('span', { className: 'dshgit-status', 'data-s': letter }, letter),
+        stageMode === undefined
+          ? null
+          : h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-rowbtn',
+                title: t(stageMode),
+                'aria-label': t(stageMode),
+                disabled: busy === true,
+                onClick: () => onStage(file, stageMode),
+              },
+              stageMode === 'stage' ? '+' : '−',
+            ),
       )
     }
 
@@ -687,11 +971,11 @@ window.__ModuleLoader__.load({
      * @param {AbortSignal} signal - request lifetime.
      * @returns {Promise<Array<object>>} changed files.
      */
-    async function fetchCommit(cwd, hash, signal) {
+    async function fetchCommit(cwd, hash, signal, sessionCwd) {
       const response = await fetch('api/git-panel/commit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ cwd, hash }),
+        body: JSON.stringify({ cwd, hash, sessionCwd }),
         signal,
       })
       if (response.ok !== true) {
@@ -765,7 +1049,211 @@ window.__ModuleLoader__.load({
         }
         lines.push({ type: 'meta', text: line, old: '', new: '' })
       }
+      let index = 0
+      while (index < lines.length) {
+        if (lines[index].type !== 'del') {
+          index += 1
+          continue
+        }
+        const deletions = []
+        while (index < lines.length && lines[index].type === 'del') {
+          deletions.push(lines[index])
+          index += 1
+        }
+        const additions = []
+        while (index < lines.length && lines[index].type === 'add') {
+          additions.push(lines[index])
+          index += 1
+        }
+        const pairs = Math.min(deletions.length, additions.length)
+        for (let pair = 0; pair < pairs; pair += 1) {
+          const left = deletions[pair].text
+          const right = additions[pair].text
+          const max = Math.min(left.length, right.length)
+          let prefix = 0
+          while (prefix < max && left.charCodeAt(prefix) === right.charCodeAt(prefix)) prefix += 1
+          let suffix = 0
+          while (
+            suffix < max - prefix &&
+            left.charCodeAt(left.length - 1 - suffix) === right.charCodeAt(right.length - 1 - suffix)
+          ) {
+            suffix += 1
+          }
+          const leftEnd = left.length - suffix
+          const rightEnd = right.length - suffix
+          if (prefix < leftEnd) deletions[pair].mark = { start: prefix, end: leftEnd }
+          if (prefix < rightEnd) additions[pair].mark = { start: prefix, end: rightEnd }
+        }
+      }
       return lines
+    }
+
+    /** Extension families that get the lightweight highlighter. */
+    const SYNTAX_EXTENSIONS = {
+      js: 'js', mjs: 'js', cjs: 'js', jsx: 'js',
+      ts: 'js', tsx: 'js', mts: 'js', cts: 'js',
+      json: 'json', jsonc: 'json', json5: 'json',
+      css: 'css', scss: 'css', sass: 'css', less: 'css',
+      html: 'html', htm: 'html', vue: 'html', svelte: 'html', xml: 'html',
+      py: 'py', pyi: 'py',
+      rb: 'rb', go: 'go', rs: 'rs', java: 'java', kt: 'kt', kts: 'kt',
+      c: 'c', h: 'c', cc: 'c', cpp: 'c', cxx: 'c', hpp: 'c',
+      cs: 'c', php: 'php', swift: 'swift',
+      sh: 'shell', bash: 'shell', zsh: 'shell', fish: 'shell',
+      yml: 'yaml', yaml: 'yaml', toml: 'toml', ini: 'ini', conf: 'ini',
+      properties: 'ini', sql: 'sql', md: 'md', mdx: 'md',
+    }
+
+    /** Common keywords across the supported languages. */
+    const KEYWORD_PATTERN =
+      '\\b(?:const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|class|extends|new|this|super|import|from|export|default|async|await|try|catch|finally|throw|typeof|instanceof|delete|void|yield|def|elif|lambda|pass|raise|with|as|None|True|False|self|and|or|not|is|pub|fn|mut|struct|enum|impl|trait|match|use|mod|package|type|interface|public|private|protected|static|final|int|string|bool|boolean|true|false|null|undefined)\\b'
+
+    /**
+     * The tokenizer family of one path.
+     * @param {string} filePath - repository-relative path.
+     * @returns {string | null} a family, or null for plain text.
+     */
+    function syntaxLanguage(filePath) {
+      const name = baseName(filePath).toLowerCase()
+      const dot = name.lastIndexOf('.')
+      if (dot < 0) return null
+      return SYNTAX_EXTENSIONS[name.slice(dot + 1)] ?? null
+    }
+
+    /**
+     * Split one line into comment, string, number and keyword tokens.
+     * @param {string} text - source line.
+     * @param {string | null} language - syntax family.
+     * @returns {Array<{ start: number, end: number, kind: string }>} tokens.
+     */
+    function tokenizeLine(text, language) {
+      if (language === null || language === 'md' || text === '') return []
+      const hashComment =
+        language === 'py' || language === 'shell' || language === 'yaml' || language === 'toml' || language === 'rb'
+      const slashComment = language !== 'css' && !hashComment
+      const parts = []
+      if (hashComment) parts.push('#[^\\n]*')
+      if (slashComment) parts.push('//[^\\n]*', '/\\*[\\s\\S]*?\\*/')
+      if (language === 'html') parts.push('<!--[\\s\\S]*?-->')
+      parts.push('"(?:\\\\.|[^"\\\\])*"', "'(?:\\\\.|[^'\\\\])*'", '`(?:\\\\.|[^`\\\\])*`')
+      parts.push('\\b\\d+(?:\\.\\d+)?\\b')
+      parts.push(KEYWORD_PATTERN)
+      const pattern = new RegExp(parts.join('|'), 'g')
+      const tokens = []
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const value = match[0]
+        const start = match.index
+        const end = start + value.length
+        let kind = 'keyword'
+        if (
+          value.startsWith('//') ||
+          value.startsWith('#') ||
+          value.startsWith('/*') ||
+          value.startsWith('<!--')
+        ) {
+          kind = 'comment'
+        } else if (value.startsWith('"') || value.startsWith("'") || value.startsWith('`')) {
+          kind = 'string'
+        } else if (/^\d/.test(value)) {
+          kind = 'number'
+        }
+        tokens.push({ start, end, kind })
+        if (value === '') pattern.lastIndex += 1
+      }
+      return tokens
+    }
+
+    /**
+     * Render one line's text with token colors and a word-diff mark.
+     * @param {string} text - line text.
+     * @param {{ start: number, end: number } | undefined} mark - changed character range.
+     * @param {Array<object>} tokens - syntax tokens.
+     * @returns {Array<*>} React children.
+     */
+    function codeSegments(text, mark, tokens) {
+      if (text === '') return [' ']
+      const points = new Set([0, text.length])
+      if (mark !== undefined && mark.end > mark.start) {
+        points.add(mark.start)
+        points.add(mark.end)
+      }
+      for (const token of tokens) {
+        points.add(token.start)
+        points.add(token.end)
+      }
+      const ordered = [...points].filter((value) => value >= 0 && value <= text.length).sort((a, b) => a - b)
+      const parts = []
+      let tokenIndex = 0
+      for (let index = 0; index < ordered.length - 1; index += 1) {
+        const start = ordered[index]
+        const end = ordered[index + 1]
+        if (end <= start) continue
+        while (tokenIndex < tokens.length && tokens[tokenIndex].end <= start) tokenIndex += 1
+        const token =
+          tokens[tokenIndex] !== undefined && tokens[tokenIndex].start <= start && tokens[tokenIndex].end >= end
+            ? tokens[tokenIndex]
+            : null
+        const marked = mark !== undefined && mark.end > mark.start && start >= mark.start && end <= mark.end
+        const piece = text.slice(start, end)
+        if (token === null && !marked) {
+          parts.push(piece)
+          continue
+        }
+        const classes = []
+        if (token !== null) classes.push('tok-' + token.kind)
+        if (marked) classes.push('tok-mark')
+        parts.push(h('span', { key: 's' + start, className: classes.join(' ') }, piece))
+      }
+      return parts
+    }
+
+    /**
+     * Pair deletion and addition lines into two-column rows.
+     * @param {Array<object>} lines - parsed diff lines.
+     * @returns {Array<object>} rows for the split view.
+     */
+    function toSplitRows(lines) {
+      const rows = []
+      let index = 0
+      while (index < lines.length) {
+        const line = lines[index]
+        if (line.type === 'del' || line.type === 'add') {
+          const deletions = []
+          const additions = []
+          while (index < lines.length && lines[index].type === 'del') {
+            deletions.push(lines[index])
+            index += 1
+          }
+          while (index < lines.length && lines[index].type === 'add') {
+            additions.push(lines[index])
+            index += 1
+          }
+          const count = Math.max(deletions.length, additions.length)
+          for (let pair = 0; pair < count; pair += 1) {
+            rows.push({ type: 'pair', left: deletions[pair] ?? null, right: additions[pair] ?? null })
+          }
+          continue
+        }
+        rows.push({ type: line.type, line })
+        index += 1
+      }
+      return rows
+    }
+
+    /** One line-number cell; clickable when the file can be opened at that line. */
+    function LineNo({ value, onOpen, title }) {
+      if (value === '' || value === null || value === undefined) {
+        return h('span', { className: 'dshgit-difflineno' })
+      }
+      if (onOpen === null || onOpen === undefined) {
+        return h('span', { className: 'dshgit-difflineno' }, value)
+      }
+      return h(
+        'button',
+        { type: 'button', className: 'dshgit-difflineno dshgit-lineno-btn', title, onClick: onOpen },
+        value,
+      )
     }
 
     /**
@@ -804,7 +1292,7 @@ window.__ModuleLoader__.load({
     }
 
     /** The unified diff view that replaces both lists while one file is open. */
-    function DiffView({ view, state, onBack, onReload, sessionId, tab, t }) {
+    function DiffView({ view, state, options, onOptions, onBack, onReload, sessionId, tab, t }) {
       const file = view.file
       const letter =
         view.rev === null
@@ -817,6 +1305,7 @@ window.__ModuleLoader__.load({
       const name = baseName(file.path)
       const directory = dirName(file.path)
       const data = state.data
+      const language = syntaxLanguage(file.path)
       const lines = React.useMemo(
         () =>
           state.phase === 'ready' && data !== null && typeof data.diff === 'string'
@@ -825,8 +1314,23 @@ window.__ModuleLoader__.load({
         [state.phase, data],
       )
       const hasChanges = lines.some((line) => line.type === 'add' || line.type === 'del')
-      const shownLines = lines.length > DIFF_RENDER_LINES ? lines.slice(0, DIFF_RENDER_LINES) : lines
-      const lineTruncated = lines.length > DIFF_RENDER_LINES
+      const visible = options.changesOnly ? lines.filter((line) => line.type !== 'ctx') : lines
+      const shownLines = visible.length > DIFF_RENDER_LINES ? visible.slice(0, DIFF_RENDER_LINES) : visible
+      const lineTruncated = visible.length > DIFF_RENDER_LINES
+      const renderText = (line) => {
+        if (line.type === 'meta' || line.type === 'hunk') return line.text === '' ? ' ' : line.text
+        return codeSegments(line.text, line.mark, options.syntax ? tokenizeLine(line.text, language) : [])
+      }
+      const openAt = (value) => {
+        if (!openable || value === '' || value === null || value === undefined) return null
+        const lineNumber = Number(value)
+        if (!Number.isFinite(lineNumber)) return null
+        return () =>
+          tab.actions.openResource(sessionFileAddress(sessionId, file.rel), {
+            params: { line: lineNumber },
+          })
+      }
+      const lineTitle = (value) => (value === '' ? '' : message(t, 'openAtLine', { line: value }))
 
       let content
       if (state.phase === 'loading') {
@@ -845,23 +1349,79 @@ window.__ModuleLoader__.load({
       } else if (data !== null && data.empty === true) {
         content = h('div', { className: 'dshgit-empty' }, t('diffEmpty'))
       } else if (data !== null) {
-        content = h(
-          'div',
-          { className: 'dshgit-diffbody' },
-          hasChanges ? null : h('div', { className: 'dshgit-note' }, t('diffMetaOnly')),
-          shownLines.map((line, index) =>
-            h(
-              'div',
-              { key: index, className: 'dshgit-diffline', 'data-t': line.type },
-              h('span', { className: 'dshgit-difflineno' }, line.old),
-              h('span', { className: 'dshgit-difflineno' }, line.new),
-              h('span', { className: 'dshgit-difflinetext' }, line.text === '' ? ' ' : line.text),
-            ),
-          ),
+        const metaNote = hasChanges ? null : h('div', { className: 'dshgit-note' }, t('diffMetaOnly'))
+        const truncatedNote =
           data.truncated === true || lineTruncated
             ? h('div', { className: 'dshgit-note' }, t('diffTruncated'))
-            : null,
-        )
+            : null
+        if (options.split) {
+          const rows = toSplitRows(shownLines)
+          content = h(
+            'div',
+            { className: 'dshgit-diffbody dshgit-diffbody-split' },
+            metaNote,
+            rows.map((row, index) => {
+              if (row.type === 'hunk' || row.type === 'meta') {
+                return h(
+                  'div',
+                  { key: index, className: 'dshgit-diffline', 'data-t': row.type },
+                  h('span', { className: 'dshgit-difflinetext' }, row.line.text === '' ? ' ' : row.line.text),
+                )
+              }
+              const left = row.type === 'ctx' ? row.line : row.left
+              const right = row.type === 'ctx' ? row.line : row.right
+              return h(
+                'div',
+                { key: index, className: 'dshgit-splitrow' },
+                h(
+                  'span',
+                  { className: 'dshgit-splitcell', 'data-t': left === null ? 'empty' : left.type },
+                  h(LineNo, {
+                    value: left === null ? '' : left.old,
+                    onOpen: left === null ? null : openAt(left.old),
+                    title: left === null ? '' : lineTitle(left.old),
+                  }),
+                  h(
+                    'span',
+                    { className: 'dshgit-difflinetext' },
+                    left === null ? '' : renderText(left),
+                  ),
+                ),
+                h(
+                  'span',
+                  { className: 'dshgit-splitcell', 'data-t': right === null ? 'empty' : right.type },
+                  h(LineNo, {
+                    value: right === null ? '' : right.new,
+                    onOpen: right === null ? null : openAt(right.new),
+                    title: right === null ? '' : lineTitle(right.new),
+                  }),
+                  h(
+                    'span',
+                    { className: 'dshgit-difflinetext' },
+                    right === null ? '' : renderText(right),
+                  ),
+                ),
+              )
+            }),
+            truncatedNote,
+          )
+        } else {
+          content = h(
+            'div',
+            { className: 'dshgit-diffbody' },
+            metaNote,
+            shownLines.map((line, index) =>
+              h(
+                'div',
+                { key: index, className: 'dshgit-diffline', 'data-t': line.type },
+                h(LineNo, { value: line.old, onOpen: openAt(line.old), title: lineTitle(line.old) }),
+                h(LineNo, { value: line.new, onOpen: openAt(line.new), title: lineTitle(line.new) }),
+                h('span', { className: 'dshgit-difflinetext' }, renderText(line)),
+              ),
+            ),
+            truncatedNote,
+          )
+        }
       }
 
       return h(
@@ -887,7 +1447,7 @@ window.__ModuleLoader__.load({
           h('span', { className: 'dshgit-grow' }),
           view.rev === null ? null : h('span', { className: 'dshgit-hash' }, view.rev.slice(0, 7)),
           h('span', { className: 'dshgit-status', 'data-s': letter }, letter),
-          h(Stats, { file }),
+          h(Stats, { additions: file.additions, deletions: file.deletions }),
           openable
             ? h(
                 'button',
@@ -913,6 +1473,40 @@ window.__ModuleLoader__.load({
             h(RefreshGlyph, {}),
           ),
         ),
+        h(
+          'div',
+          { className: 'dshgit-difftools' },
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': options.split,
+              onClick: () => onOptions({ ...options, split: !options.split }),
+            },
+            t('splitView'),
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': options.changesOnly,
+              onClick: () => onOptions({ ...options, changesOnly: !options.changesOnly }),
+            },
+            t('changesOnly'),
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': options.syntax,
+              onClick: () => onOptions({ ...options, syntax: !options.syntax }),
+            },
+            t('syntaxHighlight'),
+          ),
+        ),
         content,
       )
     }
@@ -935,6 +1529,27 @@ window.__ModuleLoader__.load({
       const [detail, setDetail] = React.useState({ hash: null, phase: 'idle', files: NO_FILES, error: null })
       const [diffView, setDiffView] = React.useState(null)
       const [diffState, setDiffState] = React.useState({ phase: 'idle', data: null, error: null })
+      const [commitMessage, setCommitMessage] = React.useState('')
+      const [limit, setLimit] = React.useState(60)
+      const [fileQuery, setFileQuery] = React.useState('')
+      const [commitQuery, setCommitQuery] = React.useState('')
+      const [fileSearchOpen, setFileSearchOpen] = React.useState(false)
+      const [commitSearchOpen, setCommitSearchOpen] = React.useState(false)
+      const [writing, setWriting] = React.useState(false)
+      const [writeError, setWriteError] = React.useState(null)
+      const [commitNotice, setCommitNotice] = React.useState(null)
+      const [repoOverride, setRepoOverride] = React.useState(() => readRepoOverride(sessionId))
+      const [repoPickerOpen, setRepoPickerOpen] = React.useState(false)
+      const [repoInput, setRepoInput] = React.useState('')
+      const [recentRepos, setRecentRepos] = React.useState(() => readRecentRepos())
+      const [contextMenu, setContextMenu] = React.useState(null)
+      const [confirmDiscard, setConfirmDiscard] = React.useState(null)
+      const [branchMenuOpen, setBranchMenuOpen] = React.useState(false)
+      const [branches, setBranches] = React.useState([])
+      const [branchInput, setBranchInput] = React.useState('')
+      const [branchLoading, setBranchLoading] = React.useState(false)
+      const [diffOptions, setDiffOptions] = React.useState(() => readDiffOptions())
+      const activeCwd = repoOverride !== null && repoOverride !== '' ? repoOverride : cwd
       const bodyRef = React.useRef(null)
       const draggingRef = React.useRef(false)
       const detailCache = React.useRef(new Map())
@@ -956,7 +1571,43 @@ window.__ModuleLoader__.load({
       )
 
       React.useEffect(() => {
-        if (cwd === undefined || cwd === null || cwd === '' || !visible) return undefined
+        diffController.current?.abort()
+        setDiffView(null)
+        setDiffState({ phase: 'idle', data: null, error: null })
+        setExpanded(null)
+        setDetail({ hash: null, phase: 'idle', files: NO_FILES, error: null })
+      }, [activeCwd])
+
+      React.useEffect(() => {
+        if (contextMenu === null && confirmDiscard === null) return undefined
+        const onKey = (event) => {
+          if (event.key === 'Escape') {
+            setContextMenu(null)
+            setConfirmDiscard(null)
+          }
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+      }, [contextMenu, confirmDiscard])
+
+      React.useEffect(() => {
+        writeDiffOptions(diffOptions)
+      }, [diffOptions])
+
+      React.useEffect(() => {
+        if (!repoPickerOpen && !branchMenuOpen) return undefined
+        const onKey = (event) => {
+          if (event.key === 'Escape') {
+            setRepoPickerOpen(false)
+            setBranchMenuOpen(false)
+          }
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+      }, [repoPickerOpen, branchMenuOpen])
+
+      React.useEffect(() => {
+        if (activeCwd === undefined || activeCwd === null || activeCwd === '' || !visible) return undefined
         let cancelled = false
         let inFlight = false
         const controller = new AbortController()
@@ -972,7 +1623,7 @@ window.__ModuleLoader__.load({
             const response = await fetch('api/git-panel/snapshot', {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ cwd, limit: 60 }),
+              body: JSON.stringify({ cwd: activeCwd, sessionCwd: cwd, limit }),
               signal: controller.signal,
             })
             if (cancelled) return
@@ -989,6 +1640,9 @@ window.__ModuleLoader__.load({
             }
             const value = await response.json()
             if (cancelled) return
+            if (value !== null && typeof value === 'object' && value.isRepo === true && typeof value.root === 'string') {
+              rememberRepo(value.root)
+            }
             setState({ phase: 'ready', data: value, error: null })
           } catch (error) {
             if (cancelled || controller.signal.aborted) return
@@ -1005,7 +1659,7 @@ window.__ModuleLoader__.load({
           controller.abort()
           clearInterval(timer)
         }
-      }, [cwd, visible, revision])
+      }, [activeCwd, visible, revision, limit])
 
       const toggleCommit = (hash) => {
         if (expanded === hash) {
@@ -1025,7 +1679,7 @@ window.__ModuleLoader__.load({
         const controller = new AbortController()
         detailController.current = controller
         setDetail({ hash, phase: 'loading', files: NO_FILES, error: null })
-        fetchCommit(cwd, hash, controller.signal).then(
+        fetchCommit(activeCwd, hash, controller.signal, cwd).then(
           (files) => {
             if (controller.signal.aborted) return
             detailCache.current.set(hash, files)
@@ -1039,14 +1693,14 @@ window.__ModuleLoader__.load({
       }
 
       const openDiff = (file, rev) => {
-        if (cwd === undefined || cwd === null || cwd === '') return
+        if (activeCwd === undefined || activeCwd === null || activeCwd === '') return
         const target = rev === undefined ? null : rev
         diffController.current?.abort()
         const controller = new AbortController()
         diffController.current = controller
         setDiffView({ file, rev: target })
         setDiffState({ phase: 'loading', data: null, error: null })
-        fetchDiff(cwd, file, target, controller.signal).then(
+        fetchDiff(activeCwd, file, target, controller.signal).then(
           (value) => {
             if (controller.signal.aborted) return
             setDiffState({ phase: 'ready', data: value, error: null })
@@ -1069,11 +1723,209 @@ window.__ModuleLoader__.load({
         if (diffView !== null) openDiff(diffView.file, diffView.rev)
       }
 
+      const runWrite = async (path, body) => {
+        setWriting(true)
+        setWriteError(null)
+        setCommitNotice(null)
+        try {
+          const response = await fetch(path, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+          const value = await response.json().catch(() => null)
+          if (response.ok !== true || value === null || value.ok !== true) {
+            const detail = value !== null && typeof value.error === 'string' ? value.error : 'HTTP ' + response.status
+            throw new Error(detail)
+          }
+          return value
+        } finally {
+          setWriting(false)
+        }
+      }
+
+      const changeStage = (file, mode) => {
+        const target = mode === 'stage' ? 'api/git-panel/stage' : 'api/git-panel/unstage'
+        runWrite(target, { cwd: activeCwd, path: file.path }).then(
+          () => setRevision((value) => value + 1),
+          (error) => setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const changeStageAll = (mode) => {
+        const target = mode === 'stage' ? 'api/git-panel/stage' : 'api/git-panel/unstage'
+        runWrite(target, { cwd: activeCwd }).then(
+          () => setRevision((value) => value + 1),
+          (error) => setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const commitStaged = () => {
+        const text = commitMessage.trim()
+        if (text === '' || writing) return
+        runWrite('api/git-panel/commit-create', { cwd: activeCwd, message: text }).then(
+          (value) => {
+            setCommitMessage('')
+            setCommitNotice(
+              message(t, 'commitDone', { short: typeof value.short === 'string' ? value.short : '' }),
+            )
+            setRevision((current) => current + 1)
+          },
+          (error) => setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const applyRepo = (value) => {
+        const target = typeof value === 'string' ? value.trim() : ''
+        if (target === '') return
+        setRepoOverride(target)
+        writeRepoOverride(sessionId, target)
+        setRepoInput('')
+        setRepoPickerOpen(false)
+        setRevision((current) => current + 1)
+      }
+
+      const useSessionDir = () => {
+        setRepoOverride(null)
+        writeRepoOverride(sessionId, null)
+        setRepoPickerOpen(false)
+        setRevision((current) => current + 1)
+      }
+
+      const toggleRepoPicker = () => {
+        setRecentRepos(readRecentRepos())
+        setRepoInput('')
+        setBranchMenuOpen(false)
+        setRepoPickerOpen((value) => !value)
+      }
+
+      const loadBranches = () => {
+        setBranchLoading(true)
+        fetch('api/git-panel/branches', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ cwd: activeCwd }),
+        })
+          .then(async (response) => {
+            const value = await response.json().catch(() => null)
+            if (response.ok !== true || value === null) {
+              const detail =
+                value !== null && typeof value.error === 'string' ? value.error : 'HTTP ' + response.status
+              throw new Error(detail)
+            }
+            setBranches(Array.isArray(value.branches) ? value.branches : [])
+          })
+          .catch((error) => setWriteError(error instanceof Error ? error.message : String(error)))
+          .finally(() => setBranchLoading(false))
+      }
+
+      const toggleBranchMenu = () => {
+        setRepoPickerOpen(false)
+        const next = !branchMenuOpen
+        setBranchMenuOpen(next)
+        setBranchInput('')
+        setWriteError(null)
+        if (next) loadBranches()
+      }
+
+      const switchToBranch = (name) => {
+        runWrite('api/git-panel/branch', { cwd: activeCwd, name }).then(
+          () => {
+            setBranchMenuOpen(false)
+            setRevision((value) => value + 1)
+          },
+          (error) => setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const submitBranch = () => {
+        const name = branchInput.trim()
+        if (name === '' || writing) return
+        runWrite('api/git-panel/branch', { cwd: activeCwd, name, create: true }).then(
+          () => {
+            setBranchInput('')
+            setBranchMenuOpen(false)
+            setRevision((value) => value + 1)
+          },
+          (error) => setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const sync = (action) => {
+        setBranchMenuOpen(false)
+        runWrite('api/git-panel/sync', { cwd: activeCwd, action }).then(
+          () => setRevision((value) => value + 1),
+          (error) => setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const openContextMenu = (event, file) => {
+        event.preventDefault()
+        const x = Math.max(6, Math.min(event.clientX, (window.innerWidth || 400) - 196))
+        const y = Math.max(6, Math.min(event.clientY, (window.innerHeight || 600) - 240))
+        setContextMenu({ file, x, y })
+      }
+
+      const closeContextMenu = () => setContextMenu(null)
+
+      const copyRepoPath = (file) => {
+        const root = data !== null && typeof data.root === 'string' ? data.root.replace(/[\\/]+$/, '') : ''
+        const value = root === '' ? file.path : root + '/' + file.path
+        try {
+          navigator.clipboard.writeText(value).catch(() => {})
+        } catch {
+          // Clipboard can be unavailable; nothing else to do.
+        }
+        closeContextMenu()
+      }
+
+      const revealFile = (file) => {
+        closeContextMenu()
+        runWrite('api/git-panel/reveal', { cwd: activeCwd, path: file.path }).catch((error) =>
+          setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const discardFile = (file) => {
+        runWrite('api/git-panel/discard', { cwd: activeCwd, path: file.path, origPath: file.origPath }).then(
+          () => setRevision((value) => value + 1),
+          (error) => setWriteError(error instanceof Error ? error.message : String(error)),
+        )
+      }
+
+      const confirmDiscardAction = () => {
+        const file = confirmDiscard
+        setConfirmDiscard(null)
+        if (file !== null) discardFile(file)
+      }
+
       const data = state.data
       const error = state.error
       const commits = data !== null && data.isRepo === true && Array.isArray(data.commits) ? data.commits : []
-      const layout = React.useMemo(() => layoutCommits(commits), [commits])
+      const commitNeedle = commitQuery.trim().toLowerCase()
+      const layout = React.useMemo(() => {
+        if (commitNeedle === '') return layoutCommits(commits)
+        const filtered = commits.filter((commit) =>
+          (commit.subject + ' ' + commit.author + ' ' + commit.short + ' ' + commit.hash + ' ' + commit.refs)
+            .toLowerCase()
+            .includes(commitNeedle),
+        )
+        return layoutCommits(filtered)
+      }, [commits, commitNeedle])
       const files = data !== null && data.isRepo === true && Array.isArray(data.files) ? data.files : []
+      const fileNeedle = fileQuery.trim().toLowerCase()
+      const matchFile = (file) => fileNeedle === '' || file.path.toLowerCase().includes(fileNeedle)
+      const filesVisible = files.filter(matchFile)
+      const stagedFiles = files.filter(
+        (file) => !file.conflicted && file.index !== ' ' && file.index !== '?' && file.index !== '',
+      )
+      const unstagedFiles = files.filter(
+        (file) => file.conflicted || file.untracked || (file.worktree !== ' ' && file.worktree !== '?'),
+      )
+      const stagedVisible = stagedFiles.filter(matchFile)
+      const unstagedVisible = unstagedFiles.filter(matchFile)
+      const stagedCount = stagedFiles.length
+      const canCommit = stagedCount > 0 && commitMessage.trim() !== '' && !writing
       const step = layout.maxLanes > 8 ? 8 : 12
       const graphWidth = 12 + Math.max(0, layout.maxLanes - 1) * step
       const refresh = () => setRevision((value) => value + 1)
@@ -1085,11 +1937,8 @@ window.__ModuleLoader__.load({
         return typeof data.branch === 'string' && data.branch !== '' ? data.branch : '—'
       })()
 
-      const counts = []
-      if (data !== null && data.isRepo === true) {
-        if (Number(data.ahead) > 0) counts.push('↑' + data.ahead)
-        if (Number(data.behind) > 0) counts.push('↓' + data.behind)
-      }
+      const ahead = data !== null && data.isRepo === true ? Number(data.ahead) : 0
+      const behind = data !== null && data.isRepo === true ? Number(data.behind) : 0
 
       let changeAdd = 0
       let changeDel = 0
@@ -1101,15 +1950,57 @@ window.__ModuleLoader__.load({
       const head = h(
         'div',
         { className: 'dshgit-head' },
-        h(GitGlyph, { size: 15, className: 'dshgit-head-glyph' }),
-        h('span', { className: 'dshgit-branch', title: data !== null && data.root !== null ? data.root : '' }, branchLabel),
-        counts.length === 0
-          ? null
-          : h(
-              'span',
-              { className: 'dshgit-ab', title: data.upstream === null ? '' : message(t, 'upstream', { name: data.upstream }) },
-              counts.join(' '),
-            ),
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'dshgit-folderbtn',
+            title: t('repoMenu'),
+            'aria-label': t('repoMenu'),
+            onClick: toggleRepoPicker,
+          },
+          h(FolderGlyph, {}),
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'dshgit-branchbtn',
+            title: data !== null && typeof data.root === 'string' ? data.root : activeCwd ?? '',
+            onClick: toggleBranchMenu,
+          },
+          h(GitGlyph, { size: 15, className: 'dshgit-head-glyph' }),
+          h('span', { className: 'dshgit-branch' }, branchLabel),
+          h(ChevronGlyph, {}),
+        ),
+        ahead > 0
+          ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-abbtn',
+                title: t('push'),
+                'aria-label': t('push'),
+                disabled: writing,
+                onClick: () => sync('push'),
+              },
+              '↑' + ahead,
+            )
+          : null,
+        behind > 0
+          ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-abbtn',
+                title: t('pull'),
+                'aria-label': t('pull'),
+                disabled: writing,
+                onClick: () => sync('pull'),
+              },
+              '↓' + behind,
+            )
+          : null,
         h('span', { className: 'dshgit-grow' }),
         h(
           'button',
@@ -1147,8 +2038,17 @@ window.__ModuleLoader__.load({
       }
 
       let body
-      if (cwd === undefined || cwd === null || cwd === '') {
-        body = h('div', { className: 'dshgit-empty' }, t('noWorkspace'))
+      if (activeCwd === undefined || activeCwd === null || activeCwd === '') {
+        body = h(
+          'div',
+          { className: 'dshgit-empty' },
+          h('div', null, t('noWorkspace')),
+          h(
+            'button',
+            { type: 'button', className: 'dshgit-retry', onClick: toggleRepoPicker },
+            t('chooseRepo'),
+          ),
+        )
       } else if (data === null && error !== null) {
         body = h(
           'div',
@@ -1164,11 +2064,18 @@ window.__ModuleLoader__.load({
           { className: 'dshgit-empty' },
           h('div', null, t(data.gitMissing === true ? 'gitMissing' : 'notRepo')),
           h('div', { className: 'dshgit-empty-path' }, data.cwd),
+          h(
+            'button',
+            { type: 'button', className: 'dshgit-retry', onClick: toggleRepoPicker },
+            t('chooseRepo'),
+          ),
         )
       } else if (diffView !== null) {
         body = h(DiffView, {
           view: diffView,
           state: diffState,
+          options: diffOptions,
+          onOptions: setDiffOptions,
           onBack: closeDiff,
           onReload: reloadDiff,
           sessionId,
@@ -1176,6 +2083,99 @@ window.__ModuleLoader__.load({
           t,
         })
       } else {
+        const renderRows = (group, mode, statsKey, prefix) =>
+          group.map((file, index) =>
+            h(FileRow, {
+              key: prefix + ':' + (file.origPath === null ? '' : file.origPath + '→') + file.path + ':' + index,
+              file,
+              onOpen: openDiff,
+              stats: file[statsKey],
+              stageMode: mode,
+              onStage: changeStage,
+              onMenu: openContextMenu,
+              busy: writing,
+              t,
+            }),
+          )
+        const changesList = []
+        if (files.length === 0) {
+          changesList.push(h('div', { key: 'clean', className: 'dshgit-note' }, t('clean')))
+        } else if (filesVisible.length === 0) {
+          changesList.push(h('div', { key: 'none', className: 'dshgit-note' }, t('noMatches')))
+        } else if (stagedCount === 0) {
+          changesList.push(...renderRows(unstagedVisible, 'stage', 'unstagedStats', 'u'))
+        } else {
+          if (stagedVisible.length > 0) {
+            changesList.push(
+              h(
+                'div',
+                { key: 'staged-head', className: 'dshgit-grouphead' },
+                h('span', null, t('stagedGroup')),
+                h('span', { className: 'dshgit-count' }, String(stagedVisible.length)),
+              ),
+            )
+            changesList.push(...renderRows(stagedVisible, 'unstage', 'stagedStats', 's'))
+          }
+          if (unstagedVisible.length > 0) {
+            changesList.push(
+              h(
+                'div',
+                { key: 'unstaged-head', className: 'dshgit-grouphead' },
+                h('span', null, t('unstagedGroup')),
+                h('span', { className: 'dshgit-count' }, String(unstagedVisible.length)),
+              ),
+            )
+            changesList.push(...renderRows(unstagedVisible, 'stage', 'unstagedStats', 'u'))
+          }
+        }
+        const commitBox = h(
+          'div',
+          { className: 'dshgit-commitbox' },
+          h('textarea', {
+            className: 'dshgit-commit-input',
+            rows: 2,
+            value: commitMessage,
+            placeholder: t('commitPlaceholder'),
+            disabled: writing,
+            onChange: (event) => {
+              setCommitMessage(event.target.value)
+              setCommitNotice(null)
+              setWriteError(null)
+            },
+            onKeyDown: (event) => {
+              if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                event.preventDefault()
+                commitStaged()
+              }
+            },
+          }),
+          h(
+            'div',
+            { className: 'dshgit-commitrow' },
+            h(
+              'span',
+              { className: 'dshgit-commit-hint' },
+              stagedCount === 0
+                ? t('commitNothingStaged')
+                : commitMessage.trim() === ''
+                  ? t('commitNoMessage')
+                  : message(t, 'stagedCount', { count: stagedCount }),
+            ),
+            h(
+              'button',
+              { type: 'button', className: 'dshgit-commitbtn', disabled: !canCommit, onClick: commitStaged },
+              writing ? t('committing') : t('commit'),
+            ),
+          ),
+          commitNotice === null ? null : h('div', { className: 'dshgit-note' }, commitNotice),
+          writeError === null
+            ? null
+            : h(
+                'div',
+                { className: 'dshgit-error dshgit-commit-error' },
+                message(t, 'writeError', { message: writeError }),
+              ),
+        )
         const changesPane = h(
           'div',
           { className: 'dshgit-pane dshgit-pane-top', style: { flexBasis: (split * 100).toFixed(2) + '%' } },
@@ -1183,31 +2183,130 @@ window.__ModuleLoader__.load({
             'div',
             { className: 'dshgit-section' },
             h('span', { className: 'dshgit-section-title' }, t('changes')),
-            h('span', { className: 'dshgit-count' }, String(files.length)),
+            h('span', { className: 'dshgit-count' }, String(filesVisible.length)),
             h(
               'span',
               { className: 'dshgit-section-meta' },
               changeAdd > 0 ? h('span', { className: 'dshgit-add' }, '+' + changeAdd) : null,
               changeDel > 0 ? h('span', { className: 'dshgit-del' }, '-' + changeDel) : null,
             ),
+            h('span', { className: 'dshgit-grow' }),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-section-btn',
+                title: t('filterFiles'),
+                'aria-label': t('filterFiles'),
+                'aria-pressed': fileSearchOpen,
+                onClick: () => setFileSearchOpen((value) => !value),
+              },
+              h(SearchGlyph, {}),
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-section-btn',
+                title: t('stageAll'),
+                'aria-label': t('stageAll'),
+                disabled: writing || unstagedFiles.length === 0,
+                onClick: () => changeStageAll('stage'),
+              },
+              '+',
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-section-btn',
+                title: t('unstageAll'),
+                'aria-label': t('unstageAll'),
+                disabled: writing || stagedCount === 0,
+                onClick: () => changeStageAll('unstage'),
+              },
+              '−',
+            ),
           ),
-          h(
-            'div',
-            { className: 'dshgit-list' },
-            files.length === 0
-              ? h('div', { className: 'dshgit-note' }, t('clean'))
-              : files.map((file, index) =>
-                  h(FileRow, {
-                    key: (file.origPath === null ? '' : file.origPath + '→') + file.path + ':' + index,
-                    file,
-                    onOpen: openDiff,
-                  }),
-                ),
-          ),
+          fileSearchOpen
+            ? h(
+                'div',
+                { className: 'dshgit-filterrow' },
+                h('input', {
+                  className: 'dshgit-filter',
+                  value: fileQuery,
+                  placeholder: t('filterFiles'),
+                  autoFocus: true,
+                  onChange: (event) => setFileQuery(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Escape') {
+                      setFileQuery('')
+                      setFileSearchOpen(false)
+                    }
+                  },
+                }),
+              )
+            : null,
+          h('div', { className: 'dshgit-list' }, changesList),
           data.filesTruncated === true
             ? h('div', { className: 'dshgit-note' }, message(t, 'filesTruncated', { count: files.length }))
             : null,
+          commitBox,
         )
+        const historyList = []
+        if (layout.rows.length === 0) {
+          historyList.push(
+            h(
+              'div',
+              { key: 'none', className: 'dshgit-note' },
+              commitNeedle === '' ? t('noCommits') : t('noMatches'),
+            ),
+          )
+        } else {
+          for (const row of layout.rows) {
+            const isOpen = expanded === row.commit.hash
+            historyList.push(
+              h(
+                React.Fragment,
+                { key: row.commit.hash },
+                h(CommitRow, {
+                  row,
+                  step,
+                  width: graphWidth,
+                  expanded: isOpen,
+                  onToggle: toggleCommit,
+                  t,
+                }),
+                isOpen
+                  ? h(CommitDetail, {
+                      commit: row.commit,
+                      detail:
+                        detail.hash === row.commit.hash
+                          ? detail
+                          : { hash: row.commit.hash, phase: 'loading', files: NO_FILES, error: null },
+                      onOpen: openDiff,
+                      t,
+                    })
+                  : null,
+              ),
+            )
+          }
+        }
+        if (data !== null && data.hasMore === true) {
+          historyList.push(
+            h(
+              'button',
+              {
+                key: 'more',
+                type: 'button',
+                className: 'dshgit-more',
+                disabled: state.phase !== 'ready',
+                onClick: () => setLimit((value) => Math.min(1000, value + 60)),
+              },
+              state.phase === 'refreshing' ? t('loadingMore') : t('loadMore'),
+            ),
+          )
+        }
         const historyPane = h(
           'div',
           { className: 'dshgit-pane dshgit-pane-bottom' },
@@ -1215,37 +2314,41 @@ window.__ModuleLoader__.load({
             'div',
             { className: 'dshgit-section' },
             h('span', { className: 'dshgit-section-title' }, t('history')),
-            h('span', { className: 'dshgit-count' }, String(commits.length)),
+            h('span', { className: 'dshgit-count' }, String(layout.rows.length)),
+            h('span', { className: 'dshgit-grow' }),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-section-btn',
+                title: t('searchCommits'),
+                'aria-label': t('searchCommits'),
+                'aria-pressed': commitSearchOpen,
+                onClick: () => setCommitSearchOpen((value) => !value),
+              },
+              h(SearchGlyph, {}),
+            ),
           ),
-          h(
-            'div',
-            { className: 'dshgit-list' },
-            commits.length === 0
-              ? h('div', { className: 'dshgit-note' }, t('noCommits'))
-              : layout.rows.map((row) => {
-                  const isOpen = expanded === row.commit.hash
-                  return h(
-                    React.Fragment,
-                    { key: row.commit.hash },
-                    h(CommitRow, {
-                      row,
-                      step,
-                      width: graphWidth,
-                      expanded: isOpen,
-                      onToggle: toggleCommit,
-                      t,
-                    }),
-                    isOpen
-                      ? h(CommitDetail, {
-                          commit: row.commit,
-                          detail: detail.hash === row.commit.hash ? detail : { hash: row.commit.hash, phase: 'loading', files: NO_FILES, error: null },
-                          onOpen: openDiff,
-                          t,
-                        })
-                      : null,
-                  )
+          commitSearchOpen
+            ? h(
+                'div',
+                { className: 'dshgit-filterrow' },
+                h('input', {
+                  className: 'dshgit-filter',
+                  value: commitQuery,
+                  placeholder: t('searchCommits'),
+                  autoFocus: true,
+                  onChange: (event) => setCommitQuery(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Escape') {
+                      setCommitQuery('')
+                      setCommitSearchOpen(false)
+                    }
+                  },
                 }),
-          ),
+              )
+            : null,
+          h('div', { className: 'dshgit-list' }, historyList),
         )
         const divider = h('div', {
           className: 'dshgit-divider',
@@ -1280,13 +2383,361 @@ window.__ModuleLoader__.load({
         )
       }
 
-      return h('div', { className: 'dshgit-root' }, h('style', null, CSS), head, body)
+      const rootPath = data !== null && typeof data.root === 'string' ? data.root : null
+      const picker = repoPickerOpen
+        ? [
+            h('div', { key: 'backdrop', className: 'dshgit-backdrop', onClick: () => setRepoPickerOpen(false) }),
+            h(
+              'div',
+              { key: 'picker', className: 'dshgit-popover' },
+              h('div', { className: 'dshgit-pop-title' }, t('repository')),
+              h('div', { className: 'dshgit-pop-current', title: rootPath ?? '' }, rootPath ?? t('notRepo')),
+              h(
+                'button',
+                { type: 'button', className: 'dshgit-pop-item', onClick: useSessionDir },
+                h('span', { className: 'dshgit-pop-name' }, t('useSessionDir')),
+                repoOverride === null ? h('span', { className: 'dshgit-pop-check' }, '✓') : null,
+              ),
+              recentRepos.length === 0
+                ? null
+                : h('div', { className: 'dshgit-pop-label' }, t('recentRepos')),
+              ...recentRepos
+                .filter((value) => value !== rootPath)
+                .slice(0, 6)
+                .map((value) =>
+                  h(
+                    'button',
+                    {
+                      key: value,
+                      type: 'button',
+                      className: 'dshgit-pop-item',
+                      title: value,
+                      onClick: () => applyRepo(value),
+                    },
+                    h(
+                      'span',
+                      { className: 'dshgit-pop-text' },
+                      h(
+                        'span',
+                        { className: 'dshgit-pop-name' },
+                        baseName(value.replace(/\\/g, '/').replace(/\/+$/, '')) || value,
+                      ),
+                      h('span', { className: 'dshgit-pop-path' }, value),
+                    ),
+                  ),
+                ),
+              h(
+                'div',
+                { className: 'dshgit-pop-form' },
+                h('input', {
+                  className: 'dshgit-filter',
+                  value: repoInput,
+                  placeholder: t('repoPathPlaceholder'),
+                  onChange: (event) => setRepoInput(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      applyRepo(repoInput)
+                    } else if (event.key === 'Escape') {
+                      setRepoPickerOpen(false)
+                    }
+                  },
+                }),
+                h(
+                  'button',
+                  { type: 'button', className: 'dshgit-pop-open', onClick: () => applyRepo(repoInput) },
+                  t('openRepo'),
+                ),
+              ),
+            ),
+          ]
+        : null
+      const branchDisabled = data === null || data.isRepo !== true || data.detached === true
+      const branchPicker = branchMenuOpen
+        ? [
+            h('div', { key: 'backdrop', className: 'dshgit-backdrop', onClick: () => setBranchMenuOpen(false) }),
+            h(
+              'div',
+              { key: 'picker', className: 'dshgit-popover' },
+              h('div', { className: 'dshgit-pop-title' }, t('branches')),
+              writeError === null
+                ? null
+                : h(
+                    'div',
+                    { className: 'dshgit-pop-error' },
+                    message(t, 'writeError', { message: writeError }),
+                  ),
+              branchLoading
+                ? h('div', { className: 'dshgit-pop-empty' }, t('loading'))
+                : branches.length === 0
+                  ? h('div', { className: 'dshgit-pop-empty' }, t('noBranches'))
+                  : branches.map((branch) =>
+                      h(
+                        'button',
+                        {
+                          key: branch.name,
+                          type: 'button',
+                          className: 'dshgit-pop-item',
+                          disabled: branch.current || writing,
+                          onClick: () => switchToBranch(branch.name),
+                        },
+                        h(
+                          'span',
+                          { className: 'dshgit-pop-text' },
+                          h('span', { className: 'dshgit-pop-name' }, branch.name),
+                        ),
+                        branch.current ? h('span', { className: 'dshgit-pop-check' }, '✓') : null,
+                      ),
+                    ),
+              h(
+                'div',
+                { className: 'dshgit-pop-form' },
+                h('input', {
+                  className: 'dshgit-filter',
+                  value: branchInput,
+                  placeholder: t('newBranchPlaceholder'),
+                  disabled: writing,
+                  onChange: (event) => setBranchInput(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      submitBranch()
+                    } else if (event.key === 'Escape') {
+                      setBranchMenuOpen(false)
+                    }
+                  },
+                }),
+                h(
+                  'button',
+                  { type: 'button', className: 'dshgit-pop-open', disabled: writing, onClick: submitBranch },
+                  t('createBranch'),
+                ),
+              ),
+              h(
+                'div',
+                { className: 'dshgit-syncrow' },
+                h(
+                  'button',
+                  { type: 'button', className: 'dshgit-syncbtn', disabled: writing, onClick: () => sync('fetch') },
+                  t('fetch'),
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dshgit-syncbtn',
+                    disabled: writing || branchDisabled,
+                    onClick: () => sync('pull'),
+                  },
+                  t('pull'),
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dshgit-syncbtn',
+                    disabled: writing || branchDisabled,
+                    onClick: () => sync('push'),
+                  },
+                  t('push'),
+                ),
+              ),
+              writing ? h('div', { className: 'dshgit-pop-empty' }, t('syncing')) : null,
+            ),
+          ]
+        : null
+      const menuFile = contextMenu === null ? null : contextMenu.file
+      const menuUnstaged =
+        menuFile !== null && (menuFile.untracked || (menuFile.worktree !== ' ' && menuFile.worktree !== '?'))
+      const menuStaged =
+        menuFile !== null &&
+        !menuFile.conflicted &&
+        menuFile.index !== ' ' &&
+        menuFile.index !== '?' &&
+        menuFile.index !== ''
+      const menu =
+        contextMenu === null
+          ? null
+          : [
+              h('div', { key: 'menu-backdrop', className: 'dshgit-backdrop', onClick: closeContextMenu }),
+              h(
+                'div',
+                {
+                  key: 'menu',
+                  className: 'dshgit-menu',
+                  style: { left: contextMenu.x + 'px', top: contextMenu.y + 'px' },
+                },
+                h(
+                  'button',
+                  {
+                    key: 'diff',
+                    type: 'button',
+                    className: 'dshgit-menuitem',
+                    onClick: () => {
+                      closeContextMenu()
+                      openDiff(menuFile)
+                    },
+                  },
+                  t('viewDiff'),
+                ),
+                menuUnstaged
+                  ? h(
+                      'button',
+                      {
+                        key: 'stage',
+                        type: 'button',
+                        className: 'dshgit-menuitem',
+                        onClick: () => {
+                          closeContextMenu()
+                          changeStage(menuFile, 'stage')
+                        },
+                      },
+                      t('stage'),
+                    )
+                  : null,
+                menuStaged
+                  ? h(
+                      'button',
+                      {
+                        key: 'unstage',
+                        type: 'button',
+                        className: 'dshgit-menuitem',
+                        onClick: () => {
+                          closeContextMenu()
+                          changeStage(menuFile, 'unstage')
+                        },
+                      },
+                      t('unstage'),
+                    )
+                  : null,
+                h('div', { key: 'sep-1', className: 'dshgit-menusep' }),
+                h(
+                  'button',
+                  {
+                    key: 'copy',
+                    type: 'button',
+                    className: 'dshgit-menuitem',
+                    onClick: () => copyRepoPath(menuFile),
+                  },
+                  t('copyPath'),
+                ),
+                h(
+                  'button',
+                  {
+                    key: 'reveal',
+                    type: 'button',
+                    className: 'dshgit-menuitem',
+                    onClick: () => revealFile(menuFile),
+                  },
+                  t('reveal'),
+                ),
+                h('div', { key: 'sep-2', className: 'dshgit-menusep' }),
+                h(
+                  'button',
+                  {
+                    key: 'discard',
+                    type: 'button',
+                    className: 'dshgit-menuitem',
+                    'data-danger': 'true',
+                    onClick: () => {
+                      closeContextMenu()
+                      setConfirmDiscard(menuFile)
+                    },
+                  },
+                  menuFile.untracked ? t('deleteFile') : t('discard'),
+                ),
+              ),
+            ]
+      const dialog =
+        confirmDiscard === null
+          ? null
+          : h(
+              'div',
+              { className: 'dshgit-modal-backdrop', onClick: () => setConfirmDiscard(null) },
+              h(
+                'div',
+                {
+                  className: 'dshgit-modal',
+                  role: 'dialog',
+                  'aria-modal': 'true',
+                  onClick: (event) => event.stopPropagation(),
+                },
+                h(
+                  'div',
+                  { className: 'dshgit-modal-title' },
+                  confirmDiscard.untracked ? t('deleteTitle') : t('discardTitle'),
+                ),
+                h(
+                  'div',
+                  { className: 'dshgit-modal-body' },
+                  message(t, confirmDiscard.untracked ? 'deleteBody' : 'discardBody', {
+                    path: confirmDiscard.path,
+                  }),
+                ),
+                h(
+                  'div',
+                  { className: 'dshgit-modal-actions' },
+                  h(
+                    'button',
+                    { type: 'button', className: 'dshgit-cancel', onClick: () => setConfirmDiscard(null) },
+                    t('cancel'),
+                  ),
+                  h(
+                    'button',
+                    { type: 'button', className: 'dshgit-danger', onClick: confirmDiscardAction },
+                    confirmDiscard.untracked ? t('confirmDelete') : t('confirmDiscard'),
+                  ),
+                ),
+              ),
+            )
+      return h('div', { className: 'dshgit-root' }, h('style', null, CSS), head, picker, branchPicker, menu, dialog, body)
     }
 
     const CSS = [
-      '.dshgit-root{height:100%;min-height:0;display:flex;flex-direction:column;color:var(--dsw-alias-label-primary);font-size:var(--dsh-content-font-size-secondary,12px);line-height:1.45}',
+      '.dshgit-root{position:relative;height:100%;min-height:0;display:flex;flex-direction:column;color:var(--dsw-alias-label-primary);font-size:var(--dsh-content-font-size-secondary,12px);line-height:1.45}',
       '.dshgit-head{flex:none;display:flex;align-items:center;gap:6px;height:36px;padding:0 6px 0 12px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
       '.dshgit-head-glyph{flex:none;color:var(--dsw-alias-label-secondary)}',
+      '.dshgit-branchbtn{display:flex;align-items:center;gap:5px;min-width:0;max-width:62%;padding:2px 4px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;cursor:pointer;overflow:hidden}',
+      '.dshgit-branchbtn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-branchbtn svg{flex:none}',
+      '.dshgit-folderbtn{width:22px;height:22px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}',
+      '.dshgit-folderbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-abbtn{flex:none;height:18px;padding:0 4px;border:none;border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}',
+      '.dshgit-abbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-syncrow{display:flex;gap:5px;margin-top:2px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-syncbtn{flex:1;height:24px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-syncbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-syncbtn:disabled{opacity:.4;cursor:default}',
+      '.dshgit-pop-empty{padding:4px 6px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dshgit-pop-error{padding:2px 4px 4px;color:var(--dsw-alias-state-error-primary);font-size:10px;line-height:1.4;word-break:break-word}',
+      '.dshgit-pop-item:disabled{opacity:.55;cursor:default}',
+      '.dshgit-pop-item:disabled:hover{background:0 0}',
+      '.dshgit-backdrop{position:fixed;inset:0;z-index:30}',
+      '.dshgit-popover{position:absolute;top:38px;left:6px;right:6px;z-index:31;display:flex;flex-direction:column;gap:3px;max-height:70%;overflow:auto;padding:8px;border-radius:var(--dsw-radius-md,8px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 8px 24px rgba(0,0,0,.18)}',
+      '.dshgit-pop-title{padding:0 2px 2px;font-size:11px;font-weight:500;color:var(--dsw-alias-label-secondary)}',
+      '.dshgit-pop-current{padding:2px 2px 5px;color:var(--dsw-alias-label-tertiary);font-size:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}',
+      '.dshgit-pop-label{padding:4px 2px 1px;color:var(--dsw-alias-label-tertiary);font-size:10px}',
+      '.dshgit-pop-item{display:flex;align-items:center;gap:6px;width:100%;padding:4px 6px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dshgit-pop-item:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-pop-text{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}',
+      '.dshgit-pop-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dshgit-pop-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
+      '.dshgit-pop-check{margin-left:auto;flex:none;color:var(--dsw-alias-brand-primary)}',
+      '.dshgit-pop-form{display:flex;gap:5px;margin-top:4px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-pop-open{flex:none;height:24px;padding:0 10px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:#fff;font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-menu{position:fixed;z-index:41;min-width:172px;padding:4px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 28px rgba(0,0,0,.22)}',
+      '.dshgit-menuitem{display:block;width:100%;padding:5px 9px;border:none;border-radius:4px;background:0 0;color:inherit;font:inherit;font-size:12px;text-align:left;cursor:pointer}',
+      '.dshgit-menuitem:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-menuitem[data-danger=true]{color:var(--dsw-alias-state-error-primary)}',
+      '.dshgit-menusep{height:1px;margin:3px 4px;background:var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
+      '.dshgit-modal-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)}',
+      '.dshgit-modal{width:min(320px,calc(100vw - 32px));padding:14px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 16px 40px rgba(0,0,0,.28)}',
+      '.dshgit-modal-title{font-weight:500;margin-bottom:6px}',
+      '.dshgit-modal-body{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;word-break:break-word;margin-bottom:12px}',
+      '.dshgit-modal-actions{display:flex;justify-content:flex-end;gap:6px}',
+      '.dshgit-cancel{padding:4px 12px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:4px;background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer}',
+      '.dshgit-cancel:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-danger{padding:4px 12px;border:none;border-radius:4px;background:var(--dsw-alias-state-error-primary);color:#fff;font:inherit;font-size:12px;cursor:pointer}',
       '.dshgit-title-glyph{flex:none;color:inherit;margin-right:6px;vertical-align:-3px}',
       '.dshgit-branch{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}',
       '.dshgit-ab{flex:none;color:var(--dsw-alias-label-tertiary);font-size:11px;font-variant-numeric:tabular-nums}',
@@ -1301,12 +2752,34 @@ window.__ModuleLoader__.load({
       '.dshgit-section{flex:none;display:flex;align-items:center;gap:6px;padding:7px 12px 3px;color:var(--dsw-alias-label-secondary);font-size:11px;user-select:none}',
       '.dshgit-section-title{font-weight:500}',
       '.dshgit-count{color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}',
-      '.dshgit-section-meta{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;font-variant-numeric:tabular-nums}',
+      '.dshgit-section-meta{display:flex;align-items:center;gap:6px;font-size:10px;font-variant-numeric:tabular-nums}',
       '.dshgit-list{flex:1 1 auto;min-height:0;overflow:auto;padding:0 6px 6px;scrollbar-gutter:stable}',
-      '.dshgit-row{box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;height:24px;padding:0 6px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;white-space:nowrap;cursor:pointer;overflow:hidden}',
+      '.dshgit-filterrow{flex:none;padding:0 8px 5px}',
+      '.dshgit-filter{box-sizing:border-box;width:100%;height:24px;padding:0 7px;border-radius:var(--dsw-radius-sm,4px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;outline:none}',
+      '.dshgit-filter:focus{border-color:var(--dsw-alias-brand-primary)}',
+      '.dshgit-filter::placeholder{color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-more{box-sizing:border-box;width:calc(100% - 12px);margin:4px 6px 2px;height:24px;border:.5px dashed var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-more:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-more:disabled{opacity:.5;cursor:default}',
+      '.dshgit-section-btn{width:18px;height:18px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:3px;background:0 0;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:1;cursor:pointer}',
+      '.dshgit-section-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-section-btn:disabled{opacity:.3;cursor:default}',
+      '.dshgit-grouphead{display:flex;align-items:center;gap:6px;height:22px;padding:2px 8px 0;color:var(--dsw-alias-label-tertiary);font-size:10px;font-weight:500;user-select:none}',
+      '.dshgit-row{box-sizing:border-box;display:flex;align-items:center;width:100%;height:24px;border-radius:var(--dsw-radius-sm,4px);white-space:nowrap;overflow:hidden}',
       '.dshgit-row:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-      '.dshgit-row[data-openable=false]{cursor:default}',
-      '.dshgit-row[data-openable=false]:hover{background:0 0}',
+      '.dshgit-rowmain{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;height:100%;padding:0 6px;border:none;background:0 0;color:inherit;font:inherit;text-align:left;white-space:nowrap;cursor:pointer;overflow:hidden}',
+      '.dshgit-rowbtn{flex:none;width:18px;height:18px;margin-right:5px;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:3px;background:0 0;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:1;cursor:pointer;opacity:0}',
+      '.dshgit-row:hover .dshgit-rowbtn,.dshgit-row:focus-within .dshgit-rowbtn{opacity:1}',
+      '.dshgit-rowbtn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-rowbtn:disabled{opacity:.4;cursor:default}',
+      '.dshgit-commitbox{flex:none;display:flex;flex-direction:column;gap:5px;padding:7px 8px 8px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-commit-input{box-sizing:border-box;width:100%;height:46px;resize:none;padding:5px 7px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;line-height:1.4;outline:none}',
+      '.dshgit-commit-input:focus{border-color:var(--dsw-alias-brand-primary)}',
+      '.dshgit-commitrow{display:flex;align-items:center;gap:8px}',
+      '.dshgit-commit-hint{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
+      '.dshgit-commitbtn{margin-left:auto;flex:none;height:24px;padding:0 12px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:#fff;font:inherit;font-size:11px;font-weight:500;cursor:pointer}',
+      '.dshgit-commitbtn:disabled{opacity:.45;cursor:default}',
+      '.dshgit-commit-error{margin:2px 0 0}',
       '.dshgit-path{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto;overflow:hidden}',
       '.dshgit-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.dshgit-dir{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:11px}',
@@ -1373,6 +2846,24 @@ window.__ModuleLoader__.load({
       '.dshgit-diffline[data-t=del]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent)}',
       '.dshgit-diffline[data-t=hunk]{color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);padding:2px 0}',
       '.dshgit-diffline[data-t=meta]{color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-difftools{flex:none;display:flex;gap:4px;padding:4px 8px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-modebtn{height:20px;padding:0 7px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:10px;cursor:pointer}',
+      '.dshgit-modebtn[aria-pressed=true]{color:var(--dsw-alias-brand-primary);border-color:currentColor;background:color-mix(in srgb,currentColor 10%,transparent)}',
+      '.dshgit-splitrow{display:grid;grid-template-columns:1fr 1fr;min-width:0}',
+      '.dshgit-splitcell{display:flex;align-items:flex-start;min-width:0;overflow:hidden;white-space:pre}',
+      '.dshgit-splitcell + .dshgit-splitcell{border-left:1px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-splitcell[data-t=add]{background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 13%,transparent)}',
+      '.dshgit-splitcell[data-t=del]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent)}',
+      '.dshgit-splitcell[data-t=empty]{background:var(--dsw-alias-bg-layer-2);opacity:.45}',
+      '.dshgit-splitcell .dshgit-difflinetext{overflow:hidden}',
+      '.dshgit-diffbody-split .dshgit-diffline[data-t=hunk],.dshgit-diffbody-split .dshgit-diffline[data-t=meta]{padding-left:6px}',
+      '.dshgit-lineno-btn{border:none;background:0 0;padding:0 5px 0 0;font:inherit;color:inherit;cursor:pointer;text-align:right}',
+      '.dshgit-lineno-btn:hover{color:var(--dsw-alias-brand-primary);text-decoration:underline}',
+      '.tok-comment{color:#7f8c98}',
+      '.tok-string{color:#98c379}',
+      '.tok-number{color:#d19a66}',
+      '.tok-keyword{color:#c678dd}',
+      '.tok-mark{background:rgba(255,196,0,.22);border-radius:2px}',
       '.dshgit-empty{margin:0;padding:8px 12px 12px;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:1.6;word-break:break-word}',
       '.dshgit-note{padding:2px 6px 6px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
       '.dshgit-empty-path{margin-top:2px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;word-break:break-all}',
