@@ -2168,13 +2168,6 @@ window.__ModuleLoader__.load({
             ),
           ),
           commitNotice === null ? null : h('div', { className: 'dshgit-note' }, commitNotice),
-          writeError === null
-            ? null
-            : h(
-                'div',
-                { className: 'dshgit-error dshgit-commit-error' },
-                message(t, 'writeError', { message: writeError }),
-              ),
         )
         const changesPane = h(
           'div',
@@ -2690,7 +2683,26 @@ window.__ModuleLoader__.load({
                 ),
               ),
             )
-      return h('div', { className: 'dshgit-root' }, h('style', null, CSS), head, picker, branchPicker, menu, dialog, body)
+      const globalError =
+        writeError === null
+          ? null
+          : h(
+              'div',
+              { className: 'dshgit-error dshgit-global-error' },
+              message(t, 'writeError', { message: writeError }),
+            )
+      return h(
+        'div',
+        { className: 'dshgit-root' },
+        h('style', null, CSS),
+        head,
+        globalError,
+        picker,
+        branchPicker,
+        menu,
+        dialog,
+        body,
+      )
     }
 
     const CSS = [
@@ -2780,6 +2792,7 @@ window.__ModuleLoader__.load({
       '.dshgit-commitbtn{margin-left:auto;flex:none;height:24px;padding:0 12px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:#fff;font:inherit;font-size:11px;font-weight:500;cursor:pointer}',
       '.dshgit-commitbtn:disabled{opacity:.45;cursor:default}',
       '.dshgit-commit-error{margin:2px 0 0}',
+      '.dshgit-global-error{margin:4px 8px 0}',
       '.dshgit-path{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto;overflow:hidden}',
       '.dshgit-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.dshgit-dir{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:11px}',
