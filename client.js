@@ -307,6 +307,45 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /** Plus glyph for staging controls. */
+    function PlusGlyph({ size = 13 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M12 5v14' }),
+        h('path', { d: 'M5 12h14' }),
+      )
+    }
+
+    /** Minus glyph for unstaging controls. */
+    function MinusGlyph({ size = 13 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M5 12h14' }),
+      )
+    }
+
     /** Magnifier used by the section filters. */
     function SearchGlyph({ size = 13 }) {
       return h(
@@ -798,7 +837,7 @@ window.__ModuleLoader__.load({
                 disabled: busy === true,
                 onClick: () => onStage(file, stageMode),
               },
-              stageMode === 'stage' ? '+' : '−',
+              stageMode === 'stage' ? h(PlusGlyph, { size: 12 }) : h(MinusGlyph, { size: 12 }),
             ),
       )
     }
@@ -1959,7 +1998,7 @@ window.__ModuleLoader__.load({
             'aria-label': t('repoMenu'),
             onClick: toggleRepoPicker,
           },
-          h(FolderGlyph, {}),
+          h(FolderGlyph, { size: 16 }),
         ),
         h(
           'button',
@@ -1969,7 +2008,7 @@ window.__ModuleLoader__.load({
             title: data !== null && typeof data.root === 'string' ? data.root : activeCwd ?? '',
             onClick: toggleBranchMenu,
           },
-          h(GitGlyph, { size: 15, className: 'dshgit-head-glyph' }),
+          h(GitGlyph, { size: 16, className: 'dshgit-head-glyph' }),
           h('span', { className: 'dshgit-branch' }, branchLabel),
           h(ChevronGlyph, {}),
         ),
@@ -2194,7 +2233,7 @@ window.__ModuleLoader__.load({
                 'aria-pressed': fileSearchOpen,
                 onClick: () => setFileSearchOpen((value) => !value),
               },
-              h(SearchGlyph, {}),
+              h(SearchGlyph, { size: 14 }),
             ),
             h(
               'button',
@@ -2206,7 +2245,7 @@ window.__ModuleLoader__.load({
                 disabled: writing || unstagedFiles.length === 0,
                 onClick: () => changeStageAll('stage'),
               },
-              '+',
+              h(PlusGlyph, { size: 14 }),
             ),
             h(
               'button',
@@ -2218,7 +2257,7 @@ window.__ModuleLoader__.load({
                 disabled: writing || stagedCount === 0,
                 onClick: () => changeStageAll('unstage'),
               },
-              '−',
+              h(MinusGlyph, { size: 14 }),
             ),
           ),
           fileSearchOpen
@@ -2319,7 +2358,7 @@ window.__ModuleLoader__.load({
                 'aria-pressed': commitSearchOpen,
                 onClick: () => setCommitSearchOpen((value) => !value),
               },
-              h(SearchGlyph, {}),
+              h(SearchGlyph, { size: 14 }),
             ),
           ),
           commitSearchOpen
@@ -2377,6 +2416,7 @@ window.__ModuleLoader__.load({
       }
 
       const rootPath = data !== null && typeof data.root === 'string' ? data.root : null
+      const visibleRecent = recentRepos.filter((value) => value !== rootPath).slice(0, 6)
       const picker = repoPickerOpen
         ? [
             h('div', { key: 'backdrop', className: 'dshgit-backdrop', onClick: () => setRepoPickerOpen(false) }),
@@ -2384,27 +2424,23 @@ window.__ModuleLoader__.load({
               'div',
               { key: 'picker', className: 'dshgit-popover' },
               h('div', { className: 'dshgit-pop-title' }, t('repository')),
-              h('div', { className: 'dshgit-pop-current', title: rootPath ?? '' }, rootPath ?? t('notRepo')),
+              h('div', { className: 'dshgit-pop-current' }, rootPath ?? t('notRepo')),
               h(
                 'button',
                 { type: 'button', className: 'dshgit-pop-item', onClick: useSessionDir },
                 h('span', { className: 'dshgit-pop-name' }, t('useSessionDir')),
                 repoOverride === null ? h('span', { className: 'dshgit-pop-check' }, '✓') : null,
               ),
-              recentRepos.length === 0
+              visibleRecent.length === 0
                 ? null
                 : h('div', { className: 'dshgit-pop-label' }, t('recentRepos')),
-              ...recentRepos
-                .filter((value) => value !== rootPath)
-                .slice(0, 6)
-                .map((value) =>
+              ...visibleRecent.map((value) =>
                   h(
                     'button',
                     {
                       key: value,
                       type: 'button',
                       className: 'dshgit-pop-item',
-                      title: value,
                       onClick: () => applyRepo(value),
                     },
                     h(
@@ -2712,12 +2748,12 @@ window.__ModuleLoader__.load({
       '.dshgit-branchbtn{display:flex;align-items:center;gap:5px;min-width:0;max-width:62%;padding:2px 4px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;cursor:pointer;overflow:hidden}',
       '.dshgit-branchbtn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-branchbtn svg{flex:none}',
-      '.dshgit-folderbtn{width:22px;height:22px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}',
+      '.dshgit-folderbtn{width:24px;height:24px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}',
       '.dshgit-folderbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-abbtn{flex:none;height:18px;padding:0 4px;border:none;border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}',
       '.dshgit-abbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-syncrow{display:flex;gap:5px;margin-top:2px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
-      '.dshgit-syncbtn{flex:1;height:24px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-syncbtn{flex:1;height:22px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
       '.dshgit-syncbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-syncbtn:disabled{opacity:.4;cursor:default}',
       '.dshgit-pop-empty{padding:4px 6px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
@@ -2725,7 +2761,7 @@ window.__ModuleLoader__.load({
       '.dshgit-pop-item:disabled{opacity:.55;cursor:default}',
       '.dshgit-pop-item:disabled:hover{background:0 0}',
       '.dshgit-backdrop{position:fixed;inset:0;z-index:30}',
-      '.dshgit-popover{position:absolute;top:38px;left:6px;right:6px;z-index:31;display:flex;flex-direction:column;gap:3px;max-height:70%;overflow:auto;padding:8px;border-radius:var(--dsw-radius-md,8px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 8px 24px rgba(0,0,0,.18)}',
+      '.dshgit-popover{position:absolute;top:38px;left:6px;right:6px;z-index:31;display:flex;flex-direction:column;gap:2px;max-height:70%;overflow:auto;padding:6px;border-radius:var(--dsw-radius-md,8px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);box-shadow:0 12px 32px rgba(0,0,0,.35)}',
       '.dshgit-pop-title{padding:0 2px 2px;font-size:11px;font-weight:500;color:var(--dsw-alias-label-secondary)}',
       '.dshgit-pop-current{padding:2px 2px 5px;color:var(--dsw-alias-label-tertiary);font-size:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}',
       '.dshgit-pop-label{padding:4px 2px 1px;color:var(--dsw-alias-label-tertiary);font-size:10px}',
@@ -2736,7 +2772,9 @@ window.__ModuleLoader__.load({
       '.dshgit-pop-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
       '.dshgit-pop-check{margin-left:auto;flex:none;color:var(--dsw-alias-brand-primary)}',
       '.dshgit-pop-form{display:flex;gap:5px;margin-top:4px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
-      '.dshgit-pop-open{flex:none;height:24px;padding:0 10px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:#fff;font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-pop-form .dshgit-filter{flex:1 1 auto;width:auto;min-width:0}',
+      '.dshgit-pop-open{flex:none;height:24px;padding:0 10px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-pop-open:disabled{opacity:.5;cursor:default}',
       '.dshgit-menu{position:fixed;z-index:41;min-width:172px;padding:4px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 28px rgba(0,0,0,.22)}',
       '.dshgit-menuitem{display:block;width:100%;padding:5px 9px;border:none;border-radius:4px;background:0 0;color:inherit;font:inherit;font-size:12px;text-align:left;cursor:pointer}',
       '.dshgit-menuitem:hover{background:var(--dsw-alias-interactive-bg-hover)}',
@@ -2767,13 +2805,13 @@ window.__ModuleLoader__.load({
       '.dshgit-section-meta{display:flex;align-items:center;gap:6px;font-size:10px;font-variant-numeric:tabular-nums}',
       '.dshgit-list{flex:1 1 auto;min-height:0;overflow:auto;padding:0 6px 6px;scrollbar-gutter:stable}',
       '.dshgit-filterrow{flex:none;padding:0 8px 5px}',
-      '.dshgit-filter{box-sizing:border-box;width:100%;height:24px;padding:0 7px;border-radius:var(--dsw-radius-sm,4px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;outline:none}',
+      '.dshgit-filter{box-sizing:border-box;width:100%;height:24px;padding:0 7px;border-radius:var(--dsw-radius-sm,4px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;outline:none}',
       '.dshgit-filter:focus{border-color:var(--dsw-alias-brand-primary)}',
       '.dshgit-filter::placeholder{color:var(--dsw-alias-label-tertiary)}',
       '.dshgit-more{box-sizing:border-box;width:calc(100% - 12px);margin:4px 6px 2px;height:24px;border:.5px dashed var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
       '.dshgit-more:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-more:disabled{opacity:.5;cursor:default}',
-      '.dshgit-section-btn{width:18px;height:18px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:3px;background:0 0;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:1;cursor:pointer}',
+      '.dshgit-section-btn{width:24px;height:24px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-tertiary);line-height:1;cursor:pointer}',
       '.dshgit-section-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
       '.dshgit-section-btn:disabled{opacity:.3;cursor:default}',
       '.dshgit-grouphead{display:flex;align-items:center;gap:6px;height:22px;padding:2px 8px 0;color:var(--dsw-alias-label-tertiary);font-size:10px;font-weight:500;user-select:none}',
@@ -2789,7 +2827,7 @@ window.__ModuleLoader__.load({
       '.dshgit-commit-input:focus{border-color:var(--dsw-alias-brand-primary)}',
       '.dshgit-commitrow{display:flex;align-items:center;gap:8px}',
       '.dshgit-commit-hint{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
-      '.dshgit-commitbtn{margin-left:auto;flex:none;height:24px;padding:0 12px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:#fff;font:inherit;font-size:11px;font-weight:500;cursor:pointer}',
+      '.dshgit-commitbtn{margin-left:auto;flex:none;height:24px;padding:0 12px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font:inherit;font-size:11px;font-weight:500;cursor:pointer}',
       '.dshgit-commitbtn:disabled{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary);opacity:1;cursor:default}',
       '.dshgit-commit-error{margin:2px 0 0}',
       '.dshgit-global-error{margin:4px 8px 0}',
