@@ -2285,7 +2285,7 @@ window.__ModuleLoader__.load({
             )
           }
         }
-        if (data !== null && data.hasMore === true) {
+        if (data !== null && data.hasMore === true && limit < 1000) {
           historyList.push(
             h(
               'button',
