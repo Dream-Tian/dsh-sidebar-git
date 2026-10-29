@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Git Panel",
+    "description": "Shows the session's changed files and commit graph in the right sidebar."
+  }
+}
