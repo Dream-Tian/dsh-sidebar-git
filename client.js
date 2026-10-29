@@ -2707,7 +2707,7 @@ window.__ModuleLoader__.load({
 
     const CSS = [
       '.dshgit-root{position:relative;height:100%;min-height:0;display:flex;flex-direction:column;color:var(--dsw-alias-label-primary);font-size:var(--dsh-content-font-size-secondary,12px);line-height:1.45}',
-      '.dshgit-head{flex:none;display:flex;align-items:center;gap:6px;height:39px;padding:0 6px 0 12px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-head{flex:none;display:flex;align-items:center;gap:6px;height:37.5px;padding:0 6px 0 12px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
       '.dshgit-head-glyph{flex:none;color:var(--dsw-alias-label-secondary)}',
       '.dshgit-branchbtn{display:flex;align-items:center;gap:5px;min-width:0;max-width:62%;padding:2px 4px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;cursor:pointer;overflow:hidden}',
       '.dshgit-branchbtn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
