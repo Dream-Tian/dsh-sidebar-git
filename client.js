@@ -67,7 +67,7 @@ window.__ModuleLoader__.load({
       unstageAll: '全部取消暂存',
       stagedGroup: '暂存的更改',
       unstagedGroup: '更改',
-      commitPlaceholder: '提交信息（Ctrl+Enter 提交）',
+      commitPlaceholder: '提交信息（Enter 提交）',
       commit: '提交',
       committing: '提交中…',
       stagedCount: '已暂存 {count} 个文件',
@@ -153,7 +153,7 @@ window.__ModuleLoader__.load({
       unstageAll: 'Unstage all',
       stagedGroup: 'Staged Changes',
       unstagedGroup: 'Changes',
-      commitPlaceholder: 'Commit message (Ctrl+Enter to commit)',
+      commitPlaceholder: 'Commit message (Enter to commit)',
       commit: 'Commit',
       committing: 'Committing…',
       stagedCount: '{count} staged',
@@ -2131,9 +2131,9 @@ window.__ModuleLoader__.load({
         const commitBox = h(
           'div',
           { className: 'dshgit-commitbox' },
-          h('textarea', {
+          h('input', {
             className: 'dshgit-commit-input',
-            rows: 1,
+            type: 'text',
             value: commitMessage,
             placeholder: t('commitPlaceholder'),
             disabled: writing,
@@ -2143,7 +2143,7 @@ window.__ModuleLoader__.load({
               setWriteError(null)
             },
             onKeyDown: (event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+              if (event.key === 'Enter') {
                 event.preventDefault()
                 commitStaged()
               }
@@ -2785,7 +2785,7 @@ window.__ModuleLoader__.load({
       '.dshgit-rowbtn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
       '.dshgit-rowbtn:disabled{opacity:.4;cursor:default}',
       '.dshgit-commitbox{flex:none;display:flex;flex-direction:column;gap:4px;padding:6px 8px 7px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
-      '.dshgit-commit-input{box-sizing:border-box;width:100%;height:28px;min-height:28px;resize:none;padding:3px 7px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;line-height:1.35;outline:none;overflow:auto}',
+      '.dshgit-commit-input{box-sizing:border-box;width:100%;height:28px;padding:0 7px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;line-height:26px;outline:none}',
       '.dshgit-commit-input:focus{border-color:var(--dsw-alias-brand-primary)}',
       '.dshgit-commitrow{display:flex;align-items:center;gap:8px}',
       '.dshgit-commit-hint{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
