@@ -294,7 +294,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    /** Check mark for the primary commit action. */
+    /** Check mark for the commit action menu. */
     function CheckGlyph({ size = 14 }) {
       return h(
         'svg',
@@ -2315,14 +2315,7 @@ window.__ModuleLoader__.load({
           )
         const changesList = []
         if (files.length === 0) {
-          changesList.push(
-            h(
-              'div',
-              { key: 'clean', className: 'dshgit-clean' },
-              h(CheckGlyph, { size: 13 }),
-              h('span', null, t('clean')),
-            ),
-          )
+          changesList.push(h('div', { key: 'clean', className: 'dshgit-clean' }, t('clean')))
         } else if (filesVisible.length === 0) {
           changesList.push(h('div', { key: 'none', className: 'dshgit-note' }, t('noMatches')))
         } else {
@@ -2441,7 +2434,6 @@ window.__ModuleLoader__.load({
             h(
               'button',
               { type: 'button', className: 'dshgit-splitmain', disabled: !canPrimary, onClick: primaryAction },
-              pushMode ? h(PushGlyph, { size: 13 }) : h(CheckGlyph, { size: 13 }),
               h('span', null, primaryLabel),
             ),
             h(
@@ -3142,7 +3134,7 @@ window.__ModuleLoader__.load({
       '.dshgit-split[data-disabled=true] .dshgit-splitchev{border-left-color:var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));color:var(--dsw-alias-label-tertiary)}',
       '.dshgit-hint{padding:0 2px;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:1.4}',
       '.dshgit-notice{padding:0 2px;color:var(--dsw-alias-state-success-primary);font-size:10px;line-height:1.4}',
-      '.dshgit-clean{display:flex;align-items:center;gap:6px;padding:6px 8px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dshgit-clean{margin:4px 4px 6px;padding:10px 12px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:14px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:1.5}',
       '.dshgit-global-error{margin:6px 8px 0}',
       '@keyframes dshgit-pop-in{from{opacity:0;transform:translateY(-3px) scale(.985)}to{opacity:1;transform:none}}',
       '@media (prefers-reduced-motion:reduce){.dshgit-popover,.dshgit-menu{animation:none}}',
