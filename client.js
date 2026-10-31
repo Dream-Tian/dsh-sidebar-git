@@ -30,7 +30,7 @@ window.__ModuleLoader__.load({
       'guide.title': 'Git',
       'guide.description': '改动文件与提交树',
       changes: '更改',
-      history: '提交',
+      history: '提交图',
       clean: '没有未提交的更改',
       noCommits: '还没有提交',
       loading: '正在读取 Git 数据…',
@@ -66,8 +66,10 @@ window.__ModuleLoader__.load({
       unstagedGroup: '更改',
       commitPlaceholder: '提交信息（Enter 提交）',
       commit: '提交',
+      commitAndPush: '提交并推送',
+      commitActions: '提交操作',
       committing: '提交中…',
-      stagedCount: '已暂存 {count} 个文件',
+      pushing: '推送中…',
       commitNoMessage: '先写提交信息',
       commitNothingStaged: '先暂存要提交的更改',
       commitDone: '已提交 {short}',
@@ -95,7 +97,6 @@ window.__ModuleLoader__.load({
       fetch: '获取',
       pull: '拉取',
       push: '推送',
-      syncing: '同步中…',
       noBranches: '没有本地分支',
       splitView: '并排',
       changesOnly: '只看改动',
@@ -109,7 +110,7 @@ window.__ModuleLoader__.load({
       'guide.title': 'Git',
       'guide.description': 'Changed files and the commit graph',
       changes: 'Changes',
-      history: 'Commits',
+      history: 'Graph',
       clean: 'No uncommitted changes',
       noCommits: 'No commits yet',
       loading: 'Reading Git data…',
@@ -145,8 +146,10 @@ window.__ModuleLoader__.load({
       unstagedGroup: 'Changes',
       commitPlaceholder: 'Commit message (Enter to commit)',
       commit: 'Commit',
+      commitAndPush: 'Commit and push',
+      commitActions: 'Commit actions',
       committing: 'Committing…',
-      stagedCount: '{count} staged',
+      pushing: 'Pushing…',
       commitNoMessage: 'Write a commit message first',
       commitNothingStaged: 'Stage changes to commit',
       commitDone: 'Committed {short}',
@@ -174,7 +177,6 @@ window.__ModuleLoader__.load({
       fetch: 'Fetch',
       pull: 'Pull',
       push: 'Push',
-      syncing: 'Syncing…',
       noBranches: 'No local branches',
       splitView: 'Split',
       changesOnly: 'Changes only',
@@ -267,6 +269,114 @@ window.__ModuleLoader__.load({
           focusable: false,
         },
         h('path', { d: 'M6 9l6 6 6-6' }),
+      )
+    }
+
+    /** Right-pointing disclosure chevron; rotated by CSS while the section is open. */
+    function DisclosureGlyph({ size = 12, open }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          className: 'dshgit-chev',
+          'data-open': open === true ? 'true' : 'false',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M9 6l6 6-6 6' }),
+      )
+    }
+
+    /** Check mark for the primary commit action. */
+    function CheckGlyph({ size = 14 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 2.2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M5 12.5l4.5 4.5L19 7' }),
+      )
+    }
+
+    /** Cloud with a down arrow: fetch from the remote. */
+    function FetchGlyph({ size = 14 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.7,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M7 17.5a4 4 0 0 1-.3-8 5.5 5.5 0 0 1 10.6-1A3.7 3.7 0 0 1 17.5 15' }),
+        h('path', { d: 'M12 11v7' }),
+        h('path', { d: 'M9.5 15.5L12 18l2.5-2.5' }),
+      )
+    }
+
+    /** Arrow down onto a baseline: pull. */
+    function PullGlyph({ size = 14 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M12 4v11' }),
+        h('path', { d: 'M8 11l4 4 4-4' }),
+        h('path', { d: 'M5 19h14' }),
+      )
+    }
+
+    /** Arrow up from a baseline: push. */
+    function PushGlyph({ size = 14 }) {
+      return h(
+        'svg',
+        {
+          viewBox: '0 0 24 24',
+          width: size,
+          height: size,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.9,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+          focusable: false,
+        },
+        h('path', { d: 'M12 20V9' }),
+        h('path', { d: 'M8 13l4-4 4 4' }),
+        h('path', { d: 'M5 5h14' }),
       )
     }
 
@@ -696,6 +806,9 @@ window.__ModuleLoader__.load({
     function FileRow({ file, onOpen, onMenu, commitStatus, stats, stageMode, onStage, busy, t }) {
       const letter = commitStatus === undefined ? statusLetter(file) : file.status
       const name = baseName(file.path)
+      const dot = name.lastIndexOf('.')
+      const stem = dot > 0 ? name.slice(0, dot) : name
+      const extension = dot > 0 ? name.slice(dot) : ''
       const directory = dirName(file.path)
       const stat = stats === undefined ? file : stats === null ? {} : stats
       const label =
@@ -720,7 +833,12 @@ window.__ModuleLoader__.load({
             'span',
             { className: 'dshgit-path' },
             h(FileIcon, { filePath: file.path }),
-            h('span', { className: 'dshgit-name' }, name),
+            h(
+              'span',
+              { className: 'dshgit-name' },
+              stem,
+              extension === '' ? null : h('span', { className: 'dshgit-ext' }, extension),
+            ),
             directory === '' ? null : h('span', { className: 'dshgit-dir' }, directory),
           ),
           h(Stats, { additions: stat.additions, deletions: stat.deletions }),
@@ -743,8 +861,8 @@ window.__ModuleLoader__.load({
       )
     }
 
-    /** One commit row: lane geometry on the left, one compact text line on the right. */
-    function CommitRow({ row, step, width, expanded, onToggle, t }) {
+    /** One commit row: lane geometry on the left, subject, author and refs on the right. */
+    function CommitRow({ row, step, width, expanded, head, onToggle, t }) {
       const before = row.before
       const after = row.after
       const lane = row.lane
@@ -821,21 +939,41 @@ window.__ModuleLoader__.load({
             focusable: false,
           },
           pieces,
-          h('circle', {
-            cx: x(lane),
-            cy: ROW / 2,
-            r: 3.5,
-            fill: LANE_COLORS[lane % LANE_COLORS.length],
-          }),
+          head === true
+            ? h(
+                React.Fragment,
+                null,
+                h('circle', {
+                  cx: x(lane),
+                  cy: ROW / 2,
+                  r: 4.4,
+                  fill: 'none',
+                  stroke: LANE_COLORS[lane % LANE_COLORS.length],
+                  strokeWidth: 2,
+                }),
+                h('circle', {
+                  cx: x(lane),
+                  cy: ROW / 2,
+                  r: 1.9,
+                  fill: LANE_COLORS[lane % LANE_COLORS.length],
+                }),
+              )
+            : h('circle', {
+                cx: x(lane),
+                cy: ROW / 2,
+                r: 3.5,
+                fill: LANE_COLORS[lane % LANE_COLORS.length],
+              }),
         ),
         h(
           'span',
           { className: 'dshgit-commit-text' },
           h(
             'span',
-            { className: 'dshgit-subject' },
+            { className: 'dshgit-subject', 'data-head': head === true ? 'true' : undefined },
             row.commit.subject === '' ? t('noSubject') : row.commit.subject,
           ),
+          row.commit.author === '' ? null : h('span', { className: 'dshgit-author' }, row.commit.author),
           refs.length === 0
             ? null
             : h(
@@ -849,7 +987,6 @@ window.__ModuleLoader__.load({
                   ),
                 ),
               ),
-          h('span', { className: 'dshgit-hash' }, row.commit.short),
         ),
       )
     }
@@ -1479,6 +1616,7 @@ window.__ModuleLoader__.load({
       const [fileSearchOpen, setFileSearchOpen] = React.useState(false)
       const [commitSearchOpen, setCommitSearchOpen] = React.useState(false)
       const [writing, setWriting] = React.useState(false)
+      const [busyAction, setBusyAction] = React.useState(null)
       const [writeError, setWriteError] = React.useState(null)
       const [commitNotice, setCommitNotice] = React.useState(null)
       const [contextMenu, setContextMenu] = React.useState(null)
@@ -1488,6 +1626,14 @@ window.__ModuleLoader__.load({
       const [branchInput, setBranchInput] = React.useState('')
       const [branchLoading, setBranchLoading] = React.useState(false)
       const [diffOptions, setDiffOptions] = React.useState(() => readDiffOptions())
+      const [changesOpen, setChangesOpen] = React.useState(true)
+      const [graphOpen, setGraphOpen] = React.useState(true)
+      const [stagedOpen, setStagedOpen] = React.useState(true)
+      const [unstagedOpen, setUnstagedOpen] = React.useState(true)
+      const [pushPending, setPushPending] = React.useState(false)
+      const [commitMenuOpen, setCommitMenuOpen] = React.useState(false)
+      const [commitMenuAnchor, setCommitMenuAnchor] = React.useState(null)
+      const [branchAnchor, setBranchAnchor] = React.useState(null)
       const bodyRef = React.useRef(null)
       const draggingRef = React.useRef(false)
       const detailCache = React.useRef(new Map())
@@ -1514,6 +1660,11 @@ window.__ModuleLoader__.load({
         setDiffState({ phase: 'idle', data: null, error: null })
         setExpanded(null)
         setDetail({ hash: null, phase: 'idle', files: NO_FILES, error: null })
+        setPushPending(false)
+        setBranchMenuOpen(false)
+        setBranchAnchor(null)
+        setCommitMenuOpen(false)
+        setCommitMenuAnchor(null)
       }, [cwd])
 
       React.useEffect(() => {
@@ -1533,13 +1684,16 @@ window.__ModuleLoader__.load({
       }, [diffOptions])
 
       React.useEffect(() => {
-        if (!branchMenuOpen) return undefined
+        if (!branchMenuOpen && !commitMenuOpen) return undefined
         const onKey = (event) => {
-          if (event.key === 'Escape') setBranchMenuOpen(false)
+          if (event.key === 'Escape') {
+            setBranchMenuOpen(false)
+            setCommitMenuOpen(false)
+          }
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-      }, [branchMenuOpen])
+      }, [branchMenuOpen, commitMenuOpen])
 
       React.useEffect(() => {
         if (cwd === undefined || cwd === null || cwd === '' || !visible) return undefined
@@ -1655,8 +1809,9 @@ window.__ModuleLoader__.load({
         if (diffView !== null) openDiff(diffView.file, diffView.rev)
       }
 
-      const runWrite = async (path, body) => {
+      const runWrite = async (path, body, action) => {
         setWriting(true)
+        setBusyAction(action ?? null)
         setWriteError(null)
         setCommitNotice(null)
         try {
@@ -1673,6 +1828,7 @@ window.__ModuleLoader__.load({
           return value
         } finally {
           setWriting(false)
+          setBusyAction(null)
         }
       }
 
@@ -1692,16 +1848,20 @@ window.__ModuleLoader__.load({
         )
       }
 
-      const commitStaged = () => {
+      const commitStaged = (alsoPush) => {
         const text = commitMessage.trim()
-        if (text === '' || writing) return
-        runWrite('api/git-panel/commit-create', { cwd, message: text }).then(
+        if (text === '' || writing || stagedCount === 0) return
+        runWrite('api/git-panel/commit-create', { cwd, message: text }, 'commit').then(
           (value) => {
             setCommitMessage('')
             setCommitNotice(
               message(t, 'commitDone', { short: typeof value.short === 'string' ? value.short : '' }),
             )
+            // The working tree is usually clean right after this, so the primary
+            // action becomes Push even when the branch has no upstream yet.
+            setPushPending(true)
             setRevision((current) => current + 1)
+            if (alsoPush === true) sync('push')
           },
           (error) => setWriteError(error instanceof Error ? error.message : String(error)),
         )
@@ -1727,12 +1887,49 @@ window.__ModuleLoader__.load({
           .finally(() => setBranchLoading(false))
       }
 
-      const toggleBranchMenu = () => {
-        const next = !branchMenuOpen
-        setBranchMenuOpen(next)
+      /** Anchor the branch popover under its trigger in the Graph header. */
+      const toggleBranchMenu = (event) => {
+        if (branchMenuOpen) {
+          setBranchMenuOpen(false)
+          return
+        }
+        const rect = event.currentTarget.getBoundingClientRect()
+        const rootRect = event.currentTarget.closest('.dshgit-root')?.getBoundingClientRect()
+        const viewportW = window.innerWidth || 400
+        const viewportH = window.innerHeight || 600
+        const panelLeft = rootRect === undefined ? 0 : rootRect.left
+        const panelWidth = rootRect === undefined ? viewportW : rootRect.width
+        const width = Math.min(264, panelWidth - 12, viewportW - 16)
+        const left = Math.max(panelLeft + 6, Math.min(rect.right - width, panelLeft + panelWidth - width - 6))
+        const below = viewportH - rect.bottom - 12
+        const above = rect.top - 12
+        const openUp = below < 220 && above > below
+        const maxHeight = Math.max(140, Math.min(360, openUp ? above : below))
+        const top = openUp ? Math.max(8, rect.bottom - 4 - maxHeight) : rect.bottom + 4
+        setBranchAnchor({ left, top, width, maxHeight })
+        setBranchMenuOpen(true)
+        setCommitMenuOpen(false)
         setBranchInput('')
         setWriteError(null)
-        if (next) loadBranches()
+        loadBranches()
+      }
+
+      /** Anchor the split button's action menu under its chevron. */
+      const openCommitMenu = (event) => {
+        if (commitMenuOpen) {
+          setCommitMenuOpen(false)
+          return
+        }
+        const rect = event.currentTarget.getBoundingClientRect()
+        const rootRect = event.currentTarget.closest('.dshgit-root')?.getBoundingClientRect()
+        const viewportW = window.innerWidth || 400
+        const panelLeft = rootRect === undefined ? 0 : rootRect.left
+        const panelWidth = rootRect === undefined ? viewportW : rootRect.width
+        const width = Math.min(232, panelWidth - 12, viewportW - 16)
+        const left = Math.max(panelLeft + 6, Math.min(rect.right - width, panelLeft + panelWidth - width - 6))
+        setCommitMenuAnchor({ left, top: rect.bottom + 4, width })
+        setCommitMenuOpen(true)
+        setBranchMenuOpen(false)
       }
 
       const switchToBranch = (name) => {
@@ -1760,8 +1957,12 @@ window.__ModuleLoader__.load({
 
       const sync = (action) => {
         setBranchMenuOpen(false)
-        runWrite('api/git-panel/sync', { cwd, action }).then(
-          () => setRevision((value) => value + 1),
+        setCommitMenuOpen(false)
+        runWrite('api/git-panel/sync', { cwd, action }, action).then(
+          () => {
+            if (action === 'push') setPushPending(false)
+            setRevision((value) => value + 1)
+          },
           (error) => setWriteError(error instanceof Error ? error.message : String(error)),
         )
       }
@@ -1846,6 +2047,40 @@ window.__ModuleLoader__.load({
 
       const ahead = data !== null && data.isRepo === true ? Number(data.ahead) : 0
       const behind = data !== null && data.isRepo === true ? Number(data.behind) : 0
+      const workingClean = files.length === 0
+      // A branch without an upstream has never pushed, so its commits are still
+      // local even when git cannot count them as ahead.
+      const noUpstream =
+        data !== null && data.isRepo === true && data.detached !== true && data.upstream === null && commits.length > 0
+      const sendable = pushPending || ahead > 0 || noUpstream
+      // Primary action: Commit while work is pending, then Push once the tree is
+      // clean and the last commit (or an upstream gap) left something to send.
+      const pushMode = workingClean && sendable
+      const canPush =
+        !writing && data !== null && data.isRepo === true && data.detached !== true && sendable
+      const canPrimary = pushMode ? canPush : canCommit
+      const primaryLabel =
+        busyAction === 'push'
+          ? t('pushing')
+          : busyAction === 'commit'
+            ? t('committing')
+            : pushMode
+              ? t('push')
+              : t('commit')
+      const primaryAction = () => {
+        if (pushMode) sync('push')
+        else commitStaged(false)
+      }
+      const commitHint =
+        writing || commitNotice !== null || pushMode
+          ? null
+          : stagedCount === 0
+            ? files.length === 0
+              ? null
+              : t('commitNothingStaged')
+            : commitMessage.trim() === ''
+              ? t('commitNoMessage')
+              : null
 
       let changeAdd = 0
       let changeDel = 0
@@ -1853,64 +2088,6 @@ window.__ModuleLoader__.load({
         if (typeof file.additions === 'number') changeAdd += file.additions
         if (typeof file.deletions === 'number') changeDel += file.deletions
       }
-
-      const head = h(
-        'div',
-        { className: 'dshgit-head' },
-        h(
-          'button',
-          {
-            type: 'button',
-            className: 'dshgit-branchbtn',
-            title: data !== null && typeof data.root === 'string' ? data.root : cwd ?? '',
-            onClick: toggleBranchMenu,
-          },
-          h(GitGlyph, { size: 16, className: 'dshgit-head-glyph' }),
-          h('span', { className: 'dshgit-branch' }, branchLabel),
-          h(ChevronGlyph, {}),
-        ),
-        ahead > 0
-          ? h(
-              'button',
-              {
-                type: 'button',
-                className: 'dshgit-abbtn',
-                title: t('push'),
-                'aria-label': t('push'),
-                disabled: writing,
-                onClick: () => sync('push'),
-              },
-              '↑' + ahead,
-            )
-          : null,
-        behind > 0
-          ? h(
-              'button',
-              {
-                type: 'button',
-                className: 'dshgit-abbtn',
-                title: t('pull'),
-                'aria-label': t('pull'),
-                disabled: writing,
-                onClick: () => sync('pull'),
-              },
-              '↓' + behind,
-            )
-          : null,
-        h('span', { className: 'dshgit-grow' }),
-        h(
-          'button',
-          {
-            type: 'button',
-            className: 'dshgit-tool',
-            title: t('refresh'),
-            'aria-label': t('refresh'),
-            onClick: refresh,
-            disabled: state.phase === 'loading',
-          },
-          h(RefreshGlyph, {}),
-        ),
-      )
 
       const onDividerDown = (event) => {
         event.preventDefault()
@@ -1981,96 +2158,187 @@ window.__ModuleLoader__.load({
           )
         const changesList = []
         if (files.length === 0) {
-          changesList.push(h('div', { key: 'clean', className: 'dshgit-note' }, t('clean')))
+          changesList.push(
+            h(
+              'div',
+              { key: 'clean', className: 'dshgit-clean' },
+              h(CheckGlyph, { size: 13 }),
+              h('span', null, t('clean')),
+            ),
+          )
         } else if (filesVisible.length === 0) {
           changesList.push(h('div', { key: 'none', className: 'dshgit-note' }, t('noMatches')))
-        } else if (stagedCount === 0) {
-          changesList.push(...renderRows(unstagedVisible, 'stage', 'unstagedStats', 'u'))
         } else {
-          if (stagedVisible.length > 0) {
-            changesList.push(
+          const renderGroup = (
+            key,
+            label,
+            groupRows,
+            mode,
+            statsKey,
+            prefix,
+            open,
+            onToggle,
+            actionMode,
+            actionLabel,
+            actionIcon,
+          ) =>
+            h(
+              'div',
+              { key, className: 'dshgit-group' },
               h(
                 'div',
-                { key: 'staged-head', className: 'dshgit-grouphead' },
-                h('span', null, t('stagedGroup')),
-                h('span', { className: 'dshgit-count' }, String(stagedVisible.length)),
+                { className: 'dshgit-grouphead' },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dshgit-groupdisclosure',
+                    'aria-expanded': open,
+                    onClick: onToggle,
+                  },
+                  h(DisclosureGlyph, { open }),
+                  h('span', { className: 'dshgit-grouptitle' }, label),
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dshgit-groupact',
+                    title: actionLabel,
+                    'aria-label': actionLabel,
+                    disabled: writing,
+                    onClick: () => changeStageAll(actionMode),
+                  },
+                  actionIcon,
+                ),
+                h('span', { className: 'dshgit-countpill' }, String(groupRows.length)),
+              ),
+              open ? renderRows(groupRows, mode, statsKey, prefix) : null,
+            )
+          if (stagedVisible.length > 0) {
+            changesList.push(
+              renderGroup(
+                'staged-group',
+                t('stagedGroup'),
+                stagedVisible,
+                'unstage',
+                'stagedStats',
+                's',
+                stagedOpen,
+                () => setStagedOpen((value) => !value),
+                'unstage',
+                t('unstageAll'),
+                h(MinusGlyph, { size: 12 }),
               ),
             )
-            changesList.push(...renderRows(stagedVisible, 'unstage', 'stagedStats', 's'))
           }
           if (unstagedVisible.length > 0) {
             changesList.push(
-              h(
-                'div',
-                { key: 'unstaged-head', className: 'dshgit-grouphead' },
-                h('span', null, t('unstagedGroup')),
-                h('span', { className: 'dshgit-count' }, String(unstagedVisible.length)),
+              renderGroup(
+                'unstaged-group',
+                t('unstagedGroup'),
+                unstagedVisible,
+                'stage',
+                'unstagedStats',
+                'u',
+                unstagedOpen,
+                () => setUnstagedOpen((value) => !value),
+                'stage',
+                t('stageAll'),
+                h(PlusGlyph, { size: 12 }),
               ),
             )
-            changesList.push(...renderRows(unstagedVisible, 'stage', 'unstagedStats', 'u'))
           }
         }
+
         const commitBox = h(
           'div',
-          { className: 'dshgit-commitbox' },
-          h('input', {
-            className: 'dshgit-commit-input',
-            type: 'text',
-            value: commitMessage,
-            placeholder: t('commitPlaceholder'),
-            disabled: writing,
-            onChange: (event) => {
-              setCommitMessage(event.target.value)
-              setCommitNotice(null)
-              setWriteError(null)
-            },
-            onKeyDown: (event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                commitStaged()
-              }
-            },
-          }),
+          { className: 'dshgit-composer' },
           h(
             'div',
-            { className: 'dshgit-commitrow' },
-            h(
-              'span',
-              { className: 'dshgit-commit-hint' },
-              stagedCount === 0
-                ? t('commitNothingStaged')
-                : commitMessage.trim() === ''
-                  ? t('commitNoMessage')
-                  : message(t, 'stagedCount', { count: stagedCount }),
-            ),
+            { className: 'dshgit-messagebox' },
+            h('input', {
+              className: 'dshgit-commitinput',
+              type: 'text',
+              value: commitMessage,
+              placeholder: t('commitPlaceholder'),
+              autoComplete: 'off',
+              disabled: writing,
+              'aria-label': t('commitPlaceholder'),
+              onChange: (event) => {
+                setCommitMessage(event.target.value)
+                setCommitNotice(null)
+                setWriteError(null)
+              },
+              onKeyDown: (event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  commitStaged(false)
+                }
+              },
+            }),
+          ),
+          h(
+            'div',
+            { className: 'dshgit-split', 'data-disabled': canPrimary ? 'false' : 'true' },
             h(
               'button',
-              { type: 'button', className: 'dshgit-commitbtn', disabled: !canCommit, onClick: commitStaged },
-              writing ? t('committing') : t('commit'),
+              { type: 'button', className: 'dshgit-splitmain', disabled: !canPrimary, onClick: primaryAction },
+              pushMode ? h(PushGlyph, { size: 13 }) : h(CheckGlyph, { size: 13 }),
+              h('span', null, primaryLabel),
             ),
-          ),
-          commitNotice === null ? null : h('div', { className: 'dshgit-note' }, commitNotice),
-        )
-        const changesPane = h(
-          'div',
-          { className: 'dshgit-pane dshgit-pane-top', style: { flexBasis: (split * 100).toFixed(2) + '%' } },
-          h(
-            'div',
-            { className: 'dshgit-section' },
-            h('span', { className: 'dshgit-section-title' }, t('changes')),
-            h('span', { className: 'dshgit-count' }, String(filesVisible.length)),
-            h(
-              'span',
-              { className: 'dshgit-section-meta' },
-              changeAdd > 0 ? h('span', { className: 'dshgit-add' }, '+' + changeAdd) : null,
-              changeDel > 0 ? h('span', { className: 'dshgit-del' }, '-' + changeDel) : null,
-            ),
-            h('span', { className: 'dshgit-grow' }),
             h(
               'button',
               {
                 type: 'button',
-                className: 'dshgit-section-btn',
+                className: 'dshgit-splitchev',
+                title: t('commitActions'),
+                'aria-label': t('commitActions'),
+                'aria-haspopup': 'menu',
+                'aria-expanded': commitMenuOpen,
+                onClick: openCommitMenu,
+              },
+              h(ChevronGlyph, { size: 10 }),
+            ),
+          ),
+          commitHint === null ? null : h('div', { className: 'dshgit-hint' }, commitHint),
+          commitNotice === null ? null : h('div', { className: 'dshgit-notice' }, commitNotice),
+        )
+
+        const changesPaneStyle = changesOpen
+          ? graphOpen
+            ? { flexBasis: (split * 100).toFixed(2) + '%' }
+            : { flexBasis: 'auto', flexGrow: 1 }
+          : { flexBasis: 'auto', flexGrow: 0, flexShrink: 0 }
+        const changesPane = h(
+          'div',
+          { className: 'dshgit-pane dshgit-pane-top', style: changesPaneStyle },
+          h(
+            'div',
+            { className: 'dshgit-sechead' },
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-secdisclosure',
+                'aria-expanded': changesOpen,
+                onClick: () => setChangesOpen((value) => !value),
+              },
+              h(DisclosureGlyph, { open: changesOpen }),
+              h('span', { className: 'dshgit-sectitle' }, t('changes')),
+            ),
+            h('span', { className: 'dshgit-grow' }),
+            h(
+              'span',
+              { className: 'dshgit-secstats' },
+              changeAdd > 0 ? h('span', { className: 'dshgit-add' }, '+' + changeAdd) : null,
+              changeDel > 0 ? h('span', { className: 'dshgit-del' }, '-' + changeDel) : null,
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-iconbtn',
                 title: t('filterFiles'),
                 'aria-label': t('filterFiles'),
                 'aria-pressed': fileSearchOpen,
@@ -2082,28 +2350,16 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-section-btn',
-                title: t('stageAll'),
-                'aria-label': t('stageAll'),
-                disabled: writing || unstagedFiles.length === 0,
-                onClick: () => changeStageAll('stage'),
+                className: 'dshgit-iconbtn',
+                title: t('refresh'),
+                'aria-label': t('refresh'),
+                disabled: state.phase === 'loading',
+                onClick: refresh,
               },
-              h(PlusGlyph, { size: 14 }),
-            ),
-            h(
-              'button',
-              {
-                type: 'button',
-                className: 'dshgit-section-btn',
-                title: t('unstageAll'),
-                'aria-label': t('unstageAll'),
-                disabled: writing || stagedCount === 0,
-                onClick: () => changeStageAll('unstage'),
-              },
-              h(MinusGlyph, { size: 14 }),
+              h(RefreshGlyph, { size: 14 }),
             ),
           ),
-          fileSearchOpen
+          changesOpen && fileSearchOpen
             ? h(
                 'div',
                 { className: 'dshgit-filterrow' },
@@ -2122,12 +2378,19 @@ window.__ModuleLoader__.load({
                 }),
               )
             : null,
-          h('div', { className: 'dshgit-list' }, changesList),
-          data.filesTruncated === true
-            ? h('div', { className: 'dshgit-note' }, message(t, 'filesTruncated', { count: files.length }))
+          changesOpen ? commitBox : null,
+          changesOpen
+            ? h(
+                'div',
+                { className: 'dshgit-list' },
+                changesList,
+                data.filesTruncated === true
+                  ? h('div', { className: 'dshgit-note' }, message(t, 'filesTruncated', { count: files.length }))
+                  : null,
+              )
             : null,
-          commitBox,
         )
+
         const historyList = []
         if (layout.rows.length === 0) {
           historyList.push(
@@ -2149,6 +2412,7 @@ window.__ModuleLoader__.load({
                   step,
                   width: graphWidth,
                   expanded: isOpen,
+                  head: data.head !== null && row.commit.short === data.head,
                   onToggle: toggleCommit,
                   t,
                 }),
@@ -2182,20 +2446,85 @@ window.__ModuleLoader__.load({
             ),
           )
         }
+        const graphPaneStyle = graphOpen
+          ? undefined
+          : { flexBasis: 'auto', flexGrow: 0, flexShrink: 0 }
         const historyPane = h(
           'div',
-          { className: 'dshgit-pane dshgit-pane-bottom' },
+          { className: 'dshgit-pane dshgit-pane-bottom', style: graphPaneStyle },
           h(
             'div',
-            { className: 'dshgit-section' },
-            h('span', { className: 'dshgit-section-title' }, t('history')),
-            h('span', { className: 'dshgit-count' }, String(layout.rows.length)),
+            { className: 'dshgit-sechead dshgit-sechead-graph' },
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-secdisclosure',
+                'aria-expanded': graphOpen,
+                onClick: () => setGraphOpen((value) => !value),
+              },
+              h(DisclosureGlyph, { open: graphOpen }),
+              h('span', { className: 'dshgit-sectitle' }, t('history')),
+            ),
             h('span', { className: 'dshgit-grow' }),
             h(
               'button',
               {
                 type: 'button',
-                className: 'dshgit-section-btn',
+                className: 'dshgit-branchbtn',
+                title: data !== null && typeof data.root === 'string' ? data.root : cwd ?? '',
+                'aria-haspopup': 'menu',
+                'aria-expanded': branchMenuOpen,
+                disabled: writing,
+                onClick: toggleBranchMenu,
+              },
+              h(GitGlyph, { size: 13, className: 'dshgit-branchglyph' }),
+              h('span', { className: 'dshgit-branch' }, branchLabel),
+              h(ChevronGlyph, { size: 9 }),
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-syncbtn',
+                title: t('fetch'),
+                'aria-label': t('fetch'),
+                disabled: writing,
+                onClick: () => sync('fetch'),
+              },
+              h(FetchGlyph, { size: 13 }),
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-syncbtn',
+                title: t('pull'),
+                'aria-label': t('pull'),
+                disabled: writing || data.detached === true,
+                onClick: () => sync('pull'),
+              },
+              h(PullGlyph, { size: 13 }),
+              behind > 0 ? h('span', { className: 'dshgit-syncnum' }, String(behind)) : null,
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-syncbtn',
+                title: t('push'),
+                'aria-label': t('push'),
+                disabled: !canPush,
+                onClick: () => sync('push'),
+              },
+              h(PushGlyph, { size: 13 }),
+              ahead > 0 ? h('span', { className: 'dshgit-syncnum' }, String(ahead)) : null,
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-iconbtn',
                 title: t('searchCommits'),
                 'aria-label': t('searchCommits'),
                 'aria-pressed': commitSearchOpen,
@@ -2204,7 +2533,7 @@ window.__ModuleLoader__.load({
               h(SearchGlyph, { size: 14 }),
             ),
           ),
-          commitSearchOpen
+          graphOpen && commitSearchOpen
             ? h(
                 'div',
                 { className: 'dshgit-filterrow' },
@@ -2223,7 +2552,7 @@ window.__ModuleLoader__.load({
                 }),
               )
             : null,
-          h('div', { className: 'dshgit-list' }, historyList),
+          graphOpen ? h('div', { className: 'dshgit-list' }, historyList) : null,
         )
         const divider = h('div', {
           className: 'dshgit-divider',
@@ -2253,26 +2582,30 @@ window.__ModuleLoader__.load({
           { className: 'dshgit-body', ref: bodyRef },
           error === null ? null : h('div', { className: 'dshgit-error' }, message(t, 'error', { message: error })),
           changesPane,
-          divider,
+          changesOpen && graphOpen ? divider : null,
           historyPane,
         )
       }
 
-      const branchDisabled = data === null || data.isRepo !== true || data.detached === true
       const branchPicker = branchMenuOpen
         ? [
             h('div', { key: 'backdrop', className: 'dshgit-backdrop', onClick: () => setBranchMenuOpen(false) }),
             h(
               'div',
-              { key: 'picker', className: 'dshgit-popover' },
+              {
+                key: 'picker',
+                className: 'dshgit-popover',
+                style:
+                  branchAnchor === null
+                    ? undefined
+                    : {
+                        left: branchAnchor.left + 'px',
+                        top: branchAnchor.top + 'px',
+                        width: branchAnchor.width + 'px',
+                        maxHeight: branchAnchor.maxHeight + 'px',
+                      },
+              },
               h('div', { className: 'dshgit-pop-title' }, t('branches')),
-              writeError === null
-                ? null
-                : h(
-                    'div',
-                    { className: 'dshgit-pop-error' },
-                    message(t, 'writeError', { message: writeError }),
-                  ),
               branchLoading
                 ? h('div', { className: 'dshgit-pop-empty' }, t('loading'))
                 : branches.length === 0
@@ -2319,39 +2652,74 @@ window.__ModuleLoader__.load({
                   t('createBranch'),
                 ),
               ),
-              h(
-                'div',
-                { className: 'dshgit-syncrow' },
-                h(
-                  'button',
-                  { type: 'button', className: 'dshgit-syncbtn', disabled: writing, onClick: () => sync('fetch') },
-                  t('fetch'),
-                ),
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    className: 'dshgit-syncbtn',
-                    disabled: writing || branchDisabled,
-                    onClick: () => sync('pull'),
-                  },
-                  t('pull'),
-                ),
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    className: 'dshgit-syncbtn',
-                    disabled: writing || branchDisabled,
-                    onClick: () => sync('push'),
-                  },
-                  t('push'),
-                ),
-              ),
-              writing ? h('div', { className: 'dshgit-pop-empty' }, t('syncing')) : null,
             ),
           ]
         : null
+      const commitPicker =
+        commitMenuOpen && commitMenuAnchor !== null
+          ? [
+              h('div', {
+                key: 'commit-backdrop',
+                className: 'dshgit-backdrop',
+                onClick: () => setCommitMenuOpen(false),
+              }),
+              h(
+                'div',
+                {
+                  key: 'commit-menu',
+                  className: 'dshgit-menu dshgit-commitmenu',
+                  style: {
+                    left: commitMenuAnchor.left + 'px',
+                    top: commitMenuAnchor.top + 'px',
+                    width: commitMenuAnchor.width + 'px',
+                  },
+                },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dshgit-menuitem',
+                    disabled: !canCommit,
+                    onClick: () => {
+                      setCommitMenuOpen(false)
+                      commitStaged(false)
+                    },
+                  },
+                  h(CheckGlyph, { size: 14 }),
+                  h('span', { className: 'dshgit-menulabel' }, t('commit')),
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dshgit-menuitem',
+                    disabled: !canCommit,
+                    onClick: () => {
+                      setCommitMenuOpen(false)
+                      commitStaged(true)
+                    },
+                  },
+                  h(PushGlyph, { size: 14 }),
+                  h('span', { className: 'dshgit-menulabel' }, t('commitAndPush')),
+                ),
+                h('div', { className: 'dshgit-menusep' }),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'dshgit-menuitem',
+                    disabled: !canPush,
+                    onClick: () => {
+                      setCommitMenuOpen(false)
+                      sync('push')
+                    },
+                  },
+                  h(PushGlyph, { size: 14 }),
+                  h('span', { className: 'dshgit-menulabel' }, t('push')),
+                ),
+              ),
+            ]
+          : null
       const menuFile = contextMenu === null ? null : contextMenu.file
       const menuUnstaged =
         menuFile !== null && (menuFile.untracked || (menuFile.worktree !== ' ' && menuFile.worktree !== '?'))
@@ -2508,9 +2876,9 @@ window.__ModuleLoader__.load({
         'div',
         { className: 'dshgit-root' },
         h('style', null, CSS),
-        head,
         globalError,
         branchPicker,
+        commitPicker,
         menu,
         dialog,
         body,
@@ -2518,50 +2886,29 @@ window.__ModuleLoader__.load({
     }
 
     const CSS = [
-      '.dshgit-root{position:relative;height:100%;min-height:0;display:flex;flex-direction:column;color:var(--dsw-alias-label-primary);font-size:var(--dsh-content-font-size-secondary,12px);line-height:1.45}',
-      '.dshgit-head{flex:none;display:flex;align-items:center;gap:6px;height:37.5px;padding:0 6px 0 12px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
-      '.dshgit-head-glyph{flex:none;color:var(--dsw-alias-label-secondary)}',
-      '.dshgit-branchbtn{display:flex;align-items:center;gap:5px;min-width:0;max-width:62%;padding:2px 4px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;cursor:pointer;overflow:hidden}',
-      '.dshgit-branchbtn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-root{position:relative;height:100%;min-height:0;display:flex;flex-direction:column;color:var(--dsw-alias-label-primary);font-size:var(--dsh-content-font-size-secondary,12px);line-height:1.45;background:var(--dsw-specific-sidebar-fill,var(--dsw-alias-bg-base))}',
+      '.dshgit-sechead{flex:none;display:flex;align-items:center;gap:2px;min-height:32px;padding:0 4px 0 5px;border-bottom:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));user-select:none}',
+      '.dshgit-sechead-graph{padding-right:3px}',
+      '.dshgit-secdisclosure{display:flex;align-items:center;gap:5px;min-width:0;height:24px;padding:0 4px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}',
+      '.dshgit-secdisclosure:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-sectitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dshgit-chev{flex:none;color:var(--dsw-alias-label-tertiary);transition:transform 140ms ease}',
+      '.dshgit-chev[data-open=true]{transform:rotate(90deg)}',
+      '.dshgit-secstats{display:flex;align-items:center;gap:5px;flex:none;margin-right:2px;font-size:10px;font-variant-numeric:tabular-nums}',
+      '.dshgit-iconbtn{width:22px;height:22px;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:0;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}',
+      '.dshgit-iconbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-iconbtn:disabled{opacity:.4;cursor:default}',
+      '.dshgit-iconbtn[aria-pressed=true]{background:color-mix(in srgb,var(--dsw-static-deepseek-500,#4176e6) 14%,transparent);color:var(--dsw-static-deepseek-500,#4176e6)}',
+      '.dshgit-branchbtn{display:flex;align-items:center;gap:4px;min-width:0;max-width:42%;height:22px;padding:0 5px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;overflow:hidden}',
+      '.dshgit-branchbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-branchbtn:disabled{opacity:.45;cursor:default}',
       '.dshgit-branchbtn svg{flex:none}',
-      '.dshgit-abbtn{flex:none;height:18px;padding:0 4px;border:none;border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}',
-      '.dshgit-abbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
-      '.dshgit-syncrow{display:flex;gap:5px;margin-top:2px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
-      '.dshgit-syncbtn{flex:1;height:22px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
-      '.dshgit-syncbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
-      '.dshgit-syncbtn:disabled{opacity:.4;cursor:default}',
-      '.dshgit-pop-empty{padding:4px 6px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
-      '.dshgit-pop-error{padding:2px 4px 4px;color:var(--dsw-alias-state-error-primary);font-size:10px;line-height:1.4;word-break:break-word}',
-      '.dshgit-pop-item:disabled{opacity:.55;cursor:default}',
-      '.dshgit-pop-item:disabled:hover{background:0 0}',
-      '.dshgit-backdrop{position:fixed;inset:0;z-index:30}',
-      '.dshgit-popover{position:absolute;top:46px;left:6px;right:6px;z-index:31;display:flex;flex-direction:column;gap:2px;max-height:70%;overflow:auto;padding:6px;border-radius:var(--dsw-radius-md,8px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);box-shadow:0 12px 32px rgba(0,0,0,.35)}',
-      '.dshgit-pop-title{padding:0 2px 2px;font-size:11px;font-weight:500;color:var(--dsw-alias-label-secondary)}',
-      '.dshgit-pop-item{display:flex;align-items:center;gap:6px;width:100%;padding:4px 6px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;cursor:pointer}',
-      '.dshgit-pop-item:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-      '.dshgit-pop-text{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}',
-      '.dshgit-pop-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      '.dshgit-pop-check{margin-left:auto;flex:none;color:var(--dsw-alias-brand-primary)}',
-      '.dshgit-pop-form{display:flex;gap:5px;margin-top:4px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
-      '.dshgit-pop-form .dshgit-filter{flex:1 1 auto;width:auto;min-width:0}',
-      '.dshgit-pop-open{flex:none;height:24px;padding:0 10px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font:inherit;font-size:11px;cursor:pointer}',
-      '.dshgit-pop-open:disabled{opacity:.5;cursor:default}',
-      '.dshgit-menu{position:fixed;z-index:41;min-width:172px;padding:4px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 28px rgba(0,0,0,.22)}',
-      '.dshgit-menuitem{display:block;width:100%;padding:5px 9px;border:none;border-radius:4px;background:0 0;color:inherit;font:inherit;font-size:12px;text-align:left;cursor:pointer}',
-      '.dshgit-menuitem:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-      '.dshgit-menuitem[data-danger=true]{color:var(--dsw-alias-state-error-primary)}',
-      '.dshgit-menusep{height:1px;margin:3px 4px;background:var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
-      '.dshgit-modal-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)}',
-      '.dshgit-modal{width:min(320px,calc(100vw - 32px));padding:14px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 16px 40px rgba(0,0,0,.28)}',
-      '.dshgit-modal-title{font-weight:500;margin-bottom:6px}',
-      '.dshgit-modal-body{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;word-break:break-word;margin-bottom:12px}',
-      '.dshgit-modal-actions{display:flex;justify-content:flex-end;gap:6px}',
-      '.dshgit-cancel{padding:4px 12px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:4px;background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer}',
-      '.dshgit-cancel:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
-      '.dshgit-danger{padding:4px 12px;border:none;border-radius:4px;background:var(--dsw-alias-state-error-primary);color:#fff;font:inherit;font-size:12px;cursor:pointer}',
-      '.dshgit-title-glyph{flex:none;color:inherit;margin-right:6px;vertical-align:-3px}',
+      '.dshgit-branchglyph{opacity:.85}',
       '.dshgit-branch{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}',
-      '.dshgit-ab{flex:none;color:var(--dsw-alias-label-tertiary);font-size:11px;font-variant-numeric:tabular-nums}',
+      '.dshgit-syncbtn{display:inline-flex;align-items:center;gap:1px;height:22px;flex:none;padding:0 3px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:10px;font-variant-numeric:tabular-nums;cursor:pointer}',
+      '.dshgit-syncbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-syncbtn:disabled{opacity:.35;cursor:default}',
+      '.dshgit-syncnum{font-size:9px;line-height:1;color:var(--dsw-alias-label-tertiary)}',
       '.dshgit-grow{flex:1}',
       '.dshgit-tool{width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:5px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer;line-height:1}',
       '.dshgit-tool:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}',
@@ -2570,52 +2917,99 @@ window.__ModuleLoader__.load({
       '.dshgit-pane{display:flex;flex-direction:column;min-height:0;overflow:hidden}',
       '.dshgit-pane-top{flex:0 0 auto}',
       '.dshgit-pane-bottom{flex:1 1 0}',
-      '.dshgit-section{flex:none;display:flex;align-items:center;gap:6px;padding:7px 12px 3px;color:var(--dsw-alias-label-secondary);font-size:11px;user-select:none}',
-      '.dshgit-section-title{font-weight:500}',
-      '.dshgit-count{color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}',
-      '.dshgit-section-meta{display:flex;align-items:center;gap:6px;font-size:10px;font-variant-numeric:tabular-nums}',
-      '.dshgit-list{flex:1 1 auto;min-height:0;overflow:auto;padding:0 6px 6px;scrollbar-gutter:stable}',
-      '.dshgit-filterrow{flex:none;padding:0 8px 5px}',
-      '.dshgit-filter{box-sizing:border-box;width:100%;height:24px;padding:0 7px;border-radius:var(--dsw-radius-sm,4px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;outline:none}',
-      '.dshgit-filter:focus{border-color:var(--dsw-alias-brand-primary)}',
+      '.dshgit-list{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 6px 8px;scrollbar-gutter:stable}',
+      '.dshgit-filterrow{flex:none;padding:6px 8px 0}',
+      '.dshgit-filter{box-sizing:border-box;width:100%;height:26px;padding:0 8px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;outline:none}',
+      '.dshgit-filter:focus{border-color:var(--dsw-static-deepseek-500,#4176e6)}',
       '.dshgit-filter::placeholder{color:var(--dsw-alias-label-tertiary)}',
-      '.dshgit-more{box-sizing:border-box;width:calc(100% - 12px);margin:4px 6px 2px;height:24px;border:.5px dashed var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-more{box-sizing:border-box;width:calc(100% - 12px);margin:4px 6px 2px;height:25px;border:.5px dashed var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
       '.dshgit-more:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-more:disabled{opacity:.5;cursor:default}',
-      '.dshgit-section-btn{width:24px;height:24px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-tertiary);line-height:1;cursor:pointer}',
-      '.dshgit-section-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
-      '.dshgit-section-btn:disabled{opacity:.3;cursor:default}',
-      '.dshgit-grouphead{display:flex;align-items:center;gap:6px;height:22px;padding:2px 8px 0;color:var(--dsw-alias-label-tertiary);font-size:10px;font-weight:500;user-select:none}',
-      '.dshgit-row{box-sizing:border-box;display:flex;align-items:center;width:100%;height:24px;border-radius:var(--dsw-radius-sm,4px);white-space:nowrap;overflow:hidden}',
+      '.dshgit-group{display:block}',
+      '.dshgit-grouphead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:2px;min-height:27px;margin:0 -6px;padding:3px 8px 0 10px;color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:600;user-select:none;background:var(--dsw-specific-sidebar-fill,var(--dsw-alias-bg-base))}',
+      '.dshgit-groupdisclosure{display:flex;align-items:center;gap:5px;min-width:0;height:22px;padding:0 3px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}',
+      '.dshgit-groupdisclosure:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-grouptitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dshgit-groupact{width:20px;height:20px;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:0;border:none;border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);cursor:pointer;opacity:0;transition:opacity 120ms ease}',
+      '.dshgit-grouphead:hover .dshgit-groupact,.dshgit-grouphead:focus-within .dshgit-groupact{opacity:1}',
+      '.dshgit-groupact:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-groupact:disabled{opacity:0;cursor:default}',
+      '.dshgit-countpill{flex:none;min-width:18px;height:18px;margin-left:2px;padding:0 5px;border-radius:9px;background:var(--dsw-static-deepseek-500,#4176e6);color:#fff;font-size:10px;font-weight:600;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}',
+      '.dshgit-composer{flex:none;display:flex;flex-direction:column;gap:6px;padding:8px 8px 9px}',
+      '.dshgit-messagebox{display:flex;align-items:center;min-height:34px;padding:0 9px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);transition:border-color 120ms ease}',
+      '.dshgit-messagebox:focus-within{border-color:var(--dsw-static-deepseek-500,#4176e6)}',
+      '.dshgit-commitinput{box-sizing:border-box;width:100%;height:32px;padding:0;border:none;background:0 0;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;outline:none}',
+      '.dshgit-commitinput::placeholder{color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-commitinput:disabled{opacity:.6}',
+      '.dshgit-split{display:flex;height:32px;border-radius:6px;overflow:hidden;background:var(--dsw-static-deepseek-500,#4176e6)}',
+      '.dshgit-splitmain{flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;border:none;background:0 0;color:#fff;font:inherit;font-size:13px;font-weight:600;line-height:1;cursor:pointer}',
+      '.dshgit-splitmain:hover:not(:disabled){background:color-mix(in srgb,var(--dsw-static-deepseek-500,#4176e6) 88%,#fff)}',
+      '.dshgit-splitchev{flex:none;width:30px;display:flex;align-items:center;justify-content:center;border:none;border-left:1px solid rgba(255,255,255,.28);background:0 0;color:#fff;cursor:pointer}',
+      '.dshgit-splitchev:hover{background:rgba(255,255,255,.12)}',
+      '.dshgit-split[data-disabled=true]{background:var(--dsw-alias-bg-layer-2)}',
+      '.dshgit-split[data-disabled=true] .dshgit-splitmain{color:var(--dsw-alias-label-tertiary);cursor:default}',
+      '.dshgit-split[data-disabled=true] .dshgit-splitchev{border-left-color:var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-hint{padding:0 2px;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:1.4}',
+      '.dshgit-notice{padding:0 2px;color:var(--dsw-alias-state-success-primary);font-size:10px;line-height:1.4}',
+      '.dshgit-clean{display:flex;align-items:center;gap:6px;padding:6px 8px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dshgit-global-error{margin:6px 8px 0}',
+      '.dshgit-backdrop{position:fixed;inset:0;z-index:30}',
+      '.dshgit-popover{position:fixed;z-index:31;display:flex;flex-direction:column;gap:2px;overflow:auto;padding:6px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);background:color-mix(in srgb,var(--dsw-alias-bg-overlay) 94%,transparent);box-shadow:0 18px 44px rgba(0,0,0,.32);backdrop-filter:blur(16px)}',
+      '.dshgit-pop-title{padding:0 2px 4px;font-size:11px;font-weight:500;color:var(--dsw-alias-label-secondary)}',
+      '.dshgit-pop-empty{padding:4px 6px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dshgit-pop-item{display:flex;align-items:center;gap:6px;width:100%;padding:5px 6px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dshgit-pop-item:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-pop-item:disabled{opacity:.55;cursor:default}',
+      '.dshgit-pop-item:disabled:hover{background:0 0}',
+      '.dshgit-pop-text{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}',
+      '.dshgit-pop-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dshgit-pop-check{margin-left:auto;flex:none;color:var(--dsw-static-deepseek-500,#4176e6)}',
+      '.dshgit-pop-form{display:flex;gap:5px;margin-top:4px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
+      '.dshgit-pop-form .dshgit-filter{flex:1 1 auto;width:auto;min-width:0}',
+      '.dshgit-pop-open{flex:none;height:26px;padding:0 10px;border:none;border-radius:6px;background:var(--dsw-static-deepseek-500,#4176e6);color:#fff;font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-pop-open:disabled{opacity:.5;cursor:default}',
+      '.dshgit-menu{position:fixed;z-index:41;min-width:172px;padding:4px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 28px rgba(0,0,0,.22)}',
+      '.dshgit-commitmenu{padding:5px}',
+      '.dshgit-menuitem{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:none;border-radius:5px;background:0 0;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;text-align:left;cursor:pointer}',
+      '.dshgit-menuitem:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dshgit-menuitem:disabled{opacity:.45;cursor:default}',
+      '.dshgit-menuitem:disabled:hover{background:0 0}',
+      '.dshgit-menuitem[data-danger=true]{color:var(--dsw-alias-state-error-primary)}',
+      '.dshgit-menulabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dshgit-menusep{height:1px;margin:3px 4px;background:var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
+      '.dshgit-modal-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)}',
+      '.dshgit-modal{width:min(320px,calc(100vw - 32px));padding:14px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 16px 40px rgba(0,0,0,.28)}',
+      '.dshgit-modal-title{font-weight:500;margin-bottom:6px}',
+      '.dshgit-modal-body{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;word-break:break-word;margin-bottom:12px}',
+      '.dshgit-modal-actions{display:flex;justify-content:flex-end;gap:6px}',
+      '.dshgit-cancel{padding:5px 12px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:5px;background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer}',
+      '.dshgit-cancel:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dshgit-danger{padding:5px 12px;border:none;border-radius:5px;background:var(--dsw-alias-state-error-primary);color:#fff;font:inherit;font-size:12px;cursor:pointer}',
+      '.dshgit-title-glyph{flex:none;color:inherit;margin-right:6px;vertical-align:-3px}',
+      '.dshgit-row{box-sizing:border-box;display:flex;align-items:center;width:100%;height:27px;border-radius:var(--dsw-radius-sm,4px);white-space:nowrap;overflow:hidden}',
       '.dshgit-row:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-      '.dshgit-rowmain{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;height:100%;padding:0 6px;border:none;background:0 0;color:inherit;font:inherit;text-align:left;white-space:nowrap;cursor:pointer;overflow:hidden}',
-      '.dshgit-rowbtn{flex:none;width:18px;height:18px;margin-right:5px;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:3px;background:0 0;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:1;cursor:pointer;opacity:0}',
+      '.dshgit-rowmain{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;height:100%;padding:0 7px;border:none;background:0 0;color:inherit;font:inherit;text-align:left;white-space:nowrap;cursor:pointer;overflow:hidden}',
+      '.dshgit-rowmain:focus-visible{outline:2px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-2px}',
+      '.dshgit-rowbtn{flex:none;width:20px;height:20px;margin-right:4px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:none;border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);line-height:1;cursor:pointer;opacity:0;transition:opacity 120ms ease}',
       '.dshgit-row:hover .dshgit-rowbtn,.dshgit-row:focus-within .dshgit-rowbtn{opacity:1}',
       '.dshgit-rowbtn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
       '.dshgit-rowbtn:disabled{opacity:.4;cursor:default}',
-      '.dshgit-commitbox{flex:none;display:flex;flex-direction:column;gap:4px;padding:6px 8px 7px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
-      '.dshgit-commit-input{box-sizing:border-box;width:100%;height:28px;padding:0 7px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;line-height:26px;outline:none}',
-      '.dshgit-commit-input:focus{border-color:var(--dsw-alias-brand-primary)}',
-      '.dshgit-commitrow{display:flex;align-items:center;gap:8px}',
-      '.dshgit-commit-hint{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
-      '.dshgit-commitbtn{margin-left:auto;flex:none;height:24px;padding:0 12px;border:none;border-radius:var(--dsw-radius-sm,4px);background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font:inherit;font-size:11px;font-weight:500;cursor:pointer}',
-      '.dshgit-commitbtn:disabled{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary);opacity:1;cursor:default}',
-      '.dshgit-commit-error{margin:2px 0 0}',
-      '.dshgit-global-error{margin:4px 8px 0}',
+      '@media (hover:none){.dshgit-rowbtn,.dshgit-groupact{opacity:1}}',
       '.dshgit-path{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto;overflow:hidden}',
-      '.dshgit-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      '.dshgit-dir{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:11px}',
-      '.dshgit-stats{flex:none;display:flex;align-items:center;gap:4px;font-size:10px;font-variant-numeric:tabular-nums}',
+      '.dshgit-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-primary)}',
+      '.dshgit-ext{color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-dir{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dshgit-stats{flex:none;display:inline-flex;align-items:center;gap:5px;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:10px;font-variant-numeric:tabular-nums}',
       '.dshgit-add{color:var(--dsw-alias-state-success-primary)}',
       '.dshgit-del{color:var(--dsw-alias-state-error-primary)}',
-      '.dshgit-status{flex:none;width:9px;text-align:center;font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-status{flex:none;width:11px;text-align:center;font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary)}',
       '.dshgit-status[data-s=M]{color:var(--dsw-alias-state-warn-primary)}',
       '.dshgit-status[data-s=A]{color:var(--dsw-alias-state-success-primary)}',
       '.dshgit-status[data-s=D]{color:var(--dsw-alias-state-error-primary)}',
       '.dshgit-status[data-s=R]{color:var(--dsw-alias-brand-primary)}',
       '.dshgit-status[data-s=C]{color:var(--dsw-alias-brand-primary)}',
       '.dshgit-status[data-s=T]{color:var(--dsw-alias-state-warn-primary)}',
-      '.dshgit-status[data-s=U]{color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-status[data-s=U]{color:var(--dsw-alias-state-success-primary)}',
       '.dshgit-status[data-s="!"]{color:var(--dsw-alias-state-error-primary)}',
       '.dshgit-ficon{flex:none;width:14px;height:14px}',
       '.dshgit-filebadge{display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:color-mix(in srgb,currentColor 15%,transparent);font-size:8.5px;font-weight:700;line-height:1;letter-spacing:-.03em;user-select:none}',
@@ -2637,17 +3031,19 @@ window.__ModuleLoader__.load({
       '.dshgit-ficon[data-k=docker]{color:#0ea5e9}',
       '.dshgit-ficon[data-k=image]{color:#84cc16}',
       '.dshgit-ficon[data-k=doc]{color:var(--dsw-alias-label-tertiary)}',
-      '.dshgit-divider{flex:0 0 7px;position:relative;cursor:row-resize;outline:none;touch-action:none}',
-      '.dshgit-divider:before{content:"";position:absolute;left:0;right:0;top:3px;height:1px;background:var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-divider{flex:0 0 9px;position:relative;cursor:row-resize;outline:none;touch-action:none}',
+      '.dshgit-divider:before{content:"";position:absolute;left:0;right:0;top:4px;height:1px;background:var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
       '.dshgit-divider:hover:before,.dshgit-divider:focus-visible:before{background:var(--dsw-alias-brand-primary)}',
-      '.dshgit-commit{box-sizing:border-box;display:flex;align-items:center;gap:6px;width:100%;height:30px;padding:0 8px 0 2px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}',
+      '.dshgit-commit{box-sizing:border-box;display:flex;align-items:center;gap:4px;width:100%;height:30px;padding:0 6px 0 0;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}',
       '.dshgit-commit:hover,.dshgit-commit[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-graph{flex:none;display:block;overflow:visible}',
-      '.dshgit-commit-text{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto;overflow:hidden}',
-      '.dshgit-subject{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      '.dshgit-refs{flex:none;display:flex;align-items:center;gap:3px;max-width:45%;overflow:hidden}',
-      '.dshgit-ref{flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));font-size:9px;line-height:13px;color:var(--dsw-alias-label-secondary)}',
-      '.dshgit-ref[data-k=head]{color:var(--dsw-alias-brand-primary);border-color:currentColor}',
+      '.dshgit-commit-text{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto;overflow:hidden}',
+      '.dshgit-subject{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}',
+      '.dshgit-subject[data-head=true]{font-weight:600}',
+      '.dshgit-author{flex:0 1 auto;min-width:0;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
+      '.dshgit-refs{flex:none;display:flex;align-items:center;gap:3px;max-width:42%;overflow:hidden}',
+      '.dshgit-ref{flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 5px;border-radius:7px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));font-size:9px;line-height:14px;color:var(--dsw-alias-label-secondary)}',
+      '.dshgit-ref[data-k=head]{color:var(--dsw-static-deepseek-500,#4176e6);border-color:color-mix(in srgb,var(--dsw-static-deepseek-500,#4176e6) 45%,transparent);background:color-mix(in srgb,var(--dsw-static-deepseek-500,#4176e6) 12%,transparent)}',
       '.dshgit-ref[data-k=tag]{color:var(--dsw-alias-state-warn-primary)}',
       '.dshgit-ref[data-k=remote]{color:var(--dsw-alias-label-tertiary)}',
       '.dshgit-hash{flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;color:var(--dsw-alias-label-tertiary)}',
