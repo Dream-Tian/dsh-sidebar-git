@@ -862,7 +862,7 @@ window.__ModuleLoader__.load({
     }
 
     /** One commit row: lane geometry on the left, subject, author and refs on the right. */
-    function CommitRow({ row, step, width, expanded, head, onToggle, t }) {
+    function CommitRow({ row, step, width, expanded, head, pending, onToggle, onPrefetch, onCancelPrefetch, t }) {
       const before = row.before
       const after = row.after
       const lane = row.lane
@@ -925,8 +925,13 @@ window.__ModuleLoader__.load({
           type: 'button',
           className: 'dshgit-commit',
           'aria-expanded': expanded,
+          'aria-busy': pending === true ? 'true' : undefined,
           title,
           onClick: () => onToggle(row.commit.hash),
+          onPointerEnter: onPrefetch === undefined ? undefined : () => onPrefetch(row.commit.hash),
+          onPointerLeave: onCancelPrefetch,
+          onFocus: onPrefetch === undefined ? undefined : () => onPrefetch(row.commit.hash),
+          onBlur: onCancelPrefetch,
         },
         h(
           'svg',
@@ -987,6 +992,13 @@ window.__ModuleLoader__.load({
                   ),
                 ),
               ),
+          pending === true
+            ? h('span', {
+                className: 'dshgit-commit-spinner',
+                role: 'status',
+                'aria-label': t('commitLoading'),
+              })
+            : null,
         ),
       )
     }
@@ -1607,6 +1619,7 @@ window.__ModuleLoader__.load({
       const [split, setSplit] = React.useState(() => readSplit(sessionId))
       const [expanded, setExpanded] = React.useState(null)
       const [detail, setDetail] = React.useState({ hash: null, phase: 'idle', files: NO_FILES, error: null })
+      const [pendingHash, setPendingHash] = React.useState(null)
       const [diffView, setDiffView] = React.useState(null)
       const [diffState, setDiffState] = React.useState({ phase: 'idle', data: null, error: null })
       const [commitMessage, setCommitMessage] = React.useState('')
@@ -1637,7 +1650,10 @@ window.__ModuleLoader__.load({
       const bodyRef = React.useRef(null)
       const draggingRef = React.useRef(false)
       const detailCache = React.useRef(new Map())
-      const detailController = React.useRef(null)
+      const detailRequest = React.useRef(0)
+      const prefetching = React.useRef(new Map())
+      const prefetchControllers = React.useRef(new Set())
+      const hoverTimer = React.useRef(null)
       const diffController = React.useRef(null)
       const visible = tab.visible !== false
 
@@ -1648,7 +1664,10 @@ window.__ModuleLoader__.load({
 
       React.useEffect(
         () => () => {
-          detailController.current?.abort()
+          if (hoverTimer.current !== null) clearTimeout(hoverTimer.current)
+          for (const controller of prefetchControllers.current) controller.abort()
+          prefetchControllers.current.clear()
+          prefetching.current.clear()
           diffController.current?.abort()
         },
         [],
@@ -1658,6 +1677,16 @@ window.__ModuleLoader__.load({
         diffController.current?.abort()
         setDiffView(null)
         setDiffState({ phase: 'idle', data: null, error: null })
+        if (hoverTimer.current !== null) {
+          clearTimeout(hoverTimer.current)
+          hoverTimer.current = null
+        }
+        for (const controller of prefetchControllers.current) controller.abort()
+        prefetchControllers.current.clear()
+        prefetching.current.clear()
+        detailCache.current.clear()
+        detailRequest.current += 1
+        setPendingHash(null)
         setExpanded(null)
         setDetail({ hash: null, phase: 'idle', files: NO_FILES, error: null })
         setPushPending(false)
@@ -1747,33 +1776,90 @@ window.__ModuleLoader__.load({
         }
       }, [cwd, visible, revision, limit])
 
+      /**
+       * Fetch one commit's file list once. Hover prefetch and the click that
+       * expands the row share this promise, so a click never duplicates a
+       * request that is already in flight.
+       */
+      const ensureCommit = (hash) => {
+        const cached = detailCache.current.get(hash)
+        if (cached !== undefined) return Promise.resolve(cached)
+        const inflight = prefetching.current.get(hash)
+        if (inflight !== undefined) return inflight
+        const controller = new AbortController()
+        prefetchControllers.current.add(controller)
+        const promise = fetchCommit(cwd, hash, controller.signal, cwd)
+          .then((files) => {
+            detailCache.current.set(hash, files)
+            return files
+          })
+          .finally(() => {
+            prefetching.current.delete(hash)
+            prefetchControllers.current.delete(controller)
+          })
+        prefetching.current.set(hash, promise)
+        return promise
+      }
+
+      /** Warm one commit's details shortly after the pointer settles on it. */
+      const prefetchCommit = (hash) => {
+        if (detailCache.current.has(hash) || prefetching.current.has(hash)) return
+        if (hoverTimer.current !== null) clearTimeout(hoverTimer.current)
+        hoverTimer.current = setTimeout(() => {
+          hoverTimer.current = null
+          ensureCommit(hash).catch(() => {})
+        }, 60)
+      }
+
+      const cancelPrefetch = () => {
+        if (hoverTimer.current === null) return
+        clearTimeout(hoverTimer.current)
+        hoverTimer.current = null
+      }
+
+      /**
+       * Open one commit. The row is only expanded once its files have arrived
+       * (or failed), so the panel never paints a loading row first and then
+       * jumps to the file list.
+       */
       const toggleCommit = (hash) => {
+        cancelPrefetch()
         if (expanded === hash) {
-          detailController.current?.abort()
-          detailController.current = null
+          detailRequest.current += 1
           setExpanded(null)
-          setDetail({ hash: null, phase: 'idle', files: NO_FILES, error: null })
+          setPendingHash(null)
           return
         }
-        setExpanded(hash)
         const cached = detailCache.current.get(hash)
         if (cached !== undefined) {
+          detailRequest.current += 1
           setDetail({ hash, phase: 'ready', files: cached, error: null })
+          setExpanded(hash)
+          setPendingHash(null)
           return
         }
-        detailController.current?.abort()
-        const controller = new AbortController()
-        detailController.current = controller
-        setDetail({ hash, phase: 'loading', files: NO_FILES, error: null })
-        fetchCommit(cwd, hash, controller.signal, cwd).then(
+        if (pendingHash === hash) return
+        detailRequest.current += 1
+        const requestId = detailRequest.current
+        setExpanded(null)
+        setPendingHash(hash)
+        ensureCommit(hash).then(
           (files) => {
-            if (controller.signal.aborted) return
-            detailCache.current.set(hash, files)
+            if (detailRequest.current !== requestId) return
             setDetail({ hash, phase: 'ready', files, error: null })
+            setExpanded(hash)
+            setPendingHash(null)
           },
           (error) => {
-            if (controller.signal.aborted) return
-            setDetail({ hash, phase: 'error', files: NO_FILES, error: error instanceof Error ? error.message : String(error) })
+            if (detailRequest.current !== requestId) return
+            setDetail({
+              hash,
+              phase: 'error',
+              files: NO_FILES,
+              error: error instanceof Error ? error.message : String(error),
+            })
+            setExpanded(hash)
+            setPendingHash(null)
           },
         )
       }
@@ -2434,20 +2520,32 @@ window.__ModuleLoader__.load({
                   width: graphWidth,
                   expanded: isOpen,
                   head: data.head !== null && row.commit.short === data.head,
+                  pending: pendingHash === row.commit.hash,
                   onToggle: toggleCommit,
+                  onPrefetch: prefetchCommit,
+                  onCancelPrefetch: cancelPrefetch,
                   t,
                 }),
-                isOpen
-                  ? h(CommitDetail, {
-                      commit: row.commit,
-                      detail:
-                        detail.hash === row.commit.hash
-                          ? detail
-                          : { hash: row.commit.hash, phase: 'loading', files: NO_FILES, error: null },
-                      onOpen: openDiff,
-                      t,
-                    })
-                  : null,
+                h(
+                  'div',
+                  {
+                    key: 'detail',
+                    className: 'dshgit-detailwrap',
+                    'data-open': isOpen ? 'true' : 'false',
+                  },
+                  h(
+                    'div',
+                    { className: 'dshgit-detailinner' },
+                    detail.hash === row.commit.hash
+                      ? h(CommitDetail, {
+                          commit: row.commit,
+                          detail,
+                          onOpen: openDiff,
+                          t,
+                        })
+                      : null,
+                  ),
+                ),
               ),
             )
           }
@@ -3082,6 +3180,12 @@ window.__ModuleLoader__.load({
       '.dshgit-ref[data-k=remote]{color:var(--dsw-alias-state-business-primary);border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 38%,transparent);background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 10%,transparent)}',
       '.dshgit-ref[data-k=tag]{color:var(--dsw-alias-state-warn-primary);border-color:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 35%,transparent);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 10%,transparent)}',
       '.dshgit-hash{flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-detailwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows 180ms cubic-bezier(.2,.8,.2,1)}',
+      '.dshgit-detailwrap[data-open=true]{grid-template-rows:1fr}',
+      '.dshgit-detailinner{min-height:0;overflow:hidden}',
+      '.dshgit-commit-spinner{box-sizing:border-box;width:10px;height:10px;flex:none;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--dsw-alias-label-secondary) 28%,transparent);border-top-color:var(--dsw-alias-label-secondary);animation:dshgit-spin .7s linear infinite}',
+      '@keyframes dshgit-spin{to{transform:rotate(360deg)}}',
+      '@media (prefers-reduced-motion:reduce){.dshgit-detailwrap{transition:none}.dshgit-commit-spinner{animation-duration:1.4s}}',
       '.dshgit-detail{display:flex;flex-direction:column;margin:0 4px 4px 12px;padding:1px 2px 4px 8px;border-left:1px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
       '.dshgit-detail-head{display:flex;align-items:center;gap:6px;padding:2px 4px 3px;color:var(--dsw-alias-label-tertiary);font-size:10px}',
       '.dshgit-detail-meta{margin-left:auto;display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}',
