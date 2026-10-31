@@ -2221,8 +2221,8 @@ window.__ModuleLoader__.load({
                   'button',
                   {
                     type: 'button',
-                    className: 'dshgit-groupact',
-                    title: actionLabel,
+                    className: 'dshgit-groupact dshgit-tip',
+                    'data-tip': actionLabel,
                     'aria-label': actionLabel,
                     disabled: writing,
                     onClick: () => changeStageAll(actionMode),
@@ -2330,7 +2330,10 @@ window.__ModuleLoader__.load({
           : { flexBasis: 'auto', flexGrow: 0, flexShrink: 0 }
         const changesPane = h(
           'div',
-          { className: 'dshgit-pane dshgit-pane-top', style: changesPaneStyle },
+          {
+            className: 'dshgit-pane dshgit-pane-top' + (changesOpen ? '' : ' dshgit-pane-closed'),
+            style: changesPaneStyle,
+          },
           h(
             'div',
             { className: 'dshgit-sechead dshgit-sechead-top' },
@@ -2356,8 +2359,8 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-iconbtn',
-                title: t('filterFiles'),
+                className: 'dshgit-iconbtn dshgit-tip',
+                'data-tip': t('filterFiles'),
                 'aria-label': t('filterFiles'),
                 'aria-pressed': fileSearchOpen,
                 onClick: () => setFileSearchOpen((value) => !value),
@@ -2368,8 +2371,8 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-iconbtn',
-                title: t('refresh'),
+                className: 'dshgit-iconbtn dshgit-tip',
+                'data-tip': t('refresh'),
                 'aria-label': t('refresh'),
                 disabled: state.phase === 'loading',
                 onClick: refresh,
@@ -2469,7 +2472,10 @@ window.__ModuleLoader__.load({
           : { flexBasis: 'auto', flexGrow: 0, flexShrink: 0 }
         const historyPane = h(
           'div',
-          { className: 'dshgit-pane dshgit-pane-bottom', style: graphPaneStyle },
+          {
+            className: 'dshgit-pane dshgit-pane-bottom' + (graphOpen ? '' : ' dshgit-pane-closed'),
+            style: graphPaneStyle,
+          },
           h(
             'div',
             { className: 'dshgit-sechead dshgit-sechead-graph' },
@@ -2489,8 +2495,8 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-branchbtn',
-                title: data !== null && typeof data.root === 'string' ? data.root : cwd ?? '',
+                className: 'dshgit-branchbtn dshgit-tip',
+                'data-tip': data !== null && typeof data.root === 'string' ? data.root : cwd ?? '',
                 'aria-haspopup': 'menu',
                 'aria-expanded': branchMenuOpen,
                 disabled: writing,
@@ -2504,8 +2510,8 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-syncbtn',
-                title: t('fetch'),
+                className: 'dshgit-syncbtn dshgit-tip',
+                'data-tip': t('fetch'),
                 'aria-label': t('fetch'),
                 disabled: writing,
                 onClick: () => sync('fetch'),
@@ -2516,8 +2522,8 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-syncbtn',
-                title: t('pull'),
+                className: 'dshgit-syncbtn dshgit-tip',
+                'data-tip': t('pull'),
                 'aria-label': t('pull'),
                 disabled: writing || data.detached === true,
                 onClick: () => sync('pull'),
@@ -2529,8 +2535,8 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-syncbtn',
-                title: t('push'),
+                className: 'dshgit-syncbtn dshgit-tip',
+                'data-tip': t('push'),
                 'aria-label': t('push'),
                 disabled: !canPush,
                 onClick: () => sync('push'),
@@ -2542,8 +2548,8 @@ window.__ModuleLoader__.load({
               'button',
               {
                 type: 'button',
-                className: 'dshgit-iconbtn',
-                title: t('searchCommits'),
+                className: 'dshgit-iconbtn dshgit-tip',
+                'data-tip': t('searchCommits'),
                 'aria-label': t('searchCommits'),
                 'aria-pressed': commitSearchOpen,
                 onClick: () => setCommitSearchOpen((value) => !value),
@@ -2920,7 +2926,7 @@ window.__ModuleLoader__.load({
       '.dshgit-iconbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-iconbtn:disabled{opacity:.4;cursor:default}',
       '.dshgit-iconbtn[aria-pressed=true]{background:color-mix(in srgb,var(--dsw-static-deepseek-500,#4176e6) 14%,transparent);color:var(--dsw-static-deepseek-500,#4176e6)}',
-      '.dshgit-branchbtn{display:flex;align-items:center;gap:4px;min-width:0;max-width:42%;height:22px;padding:0 5px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer;overflow:hidden}',
+      '.dshgit-branchbtn{display:flex;align-items:center;gap:4px;min-width:0;max-width:42%;height:22px;padding:0 5px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
       '.dshgit-branchbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-branchbtn:disabled{opacity:.45;cursor:default}',
       '.dshgit-branchbtn svg{flex:none}',
@@ -2931,6 +2937,10 @@ window.__ModuleLoader__.load({
       '.dshgit-syncbtn:disabled{opacity:.35;cursor:default}',
       '.dshgit-syncnum{font-size:9px;line-height:1;color:var(--dsw-alias-label-tertiary)}',
       '.dshgit-grow{flex:1}',
+      '.dshgit-tip{position:relative}',
+      '.dshgit-tip::after{content:attr(data-tip);position:absolute;right:0;top:calc(100% + 5px);z-index:60;padding:4px 7px;border-radius:5px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 18px rgba(0,0,0,.24);font-size:11px;font-weight:400;line-height:1.3;max-width:180px;white-space:normal;overflow-wrap:anywhere;text-align:left;pointer-events:none;opacity:0;transform:translateY(-2px);transition:opacity 100ms ease,transform 100ms ease}',
+      '.dshgit-tip:hover::after,.dshgit-tip:focus-visible::after{opacity:1;transform:none;transition-delay:180ms}',
+      '.dshgit-branchbtn::after{left:0;right:auto}',
       '.dshgit-tool{width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:5px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer;line-height:1}',
       '.dshgit-tool:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-tool:disabled{opacity:.55;cursor:default}',
@@ -2938,6 +2948,7 @@ window.__ModuleLoader__.load({
       '.dshgit-pane{display:flex;flex-direction:column;min-height:0;overflow:hidden}',
       '.dshgit-pane-top{flex:0 0 auto}',
       '.dshgit-pane-bottom{flex:1 1 0}',
+      '.dshgit-pane-closed{overflow:visible}',
       '.dshgit-list{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 6px 8px;scrollbar-gutter:stable}',
       '.dshgit-filterrow{flex:none;padding:6px 8px 0}',
       '.dshgit-filter{box-sizing:border-box;width:100%;height:26px;padding:0 8px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;outline:none}',
