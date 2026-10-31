@@ -2214,25 +2214,78 @@ window.__ModuleLoader__.load({
         }
       }
 
+      /**
+       * A non-repo state still gets the section header so the top divider lines
+       * up with the rest of the panel; the message sits in a rounded card below.
+       */
+      const emptyShell = (content) =>
+        h(
+          'div',
+          { className: 'dshgit-pane dshgit-pane-top dshgit-pane-empty' },
+          h(
+            'div',
+            { className: 'dshgit-sechead dshgit-sechead-top' },
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-secdisclosure',
+                'aria-expanded': changesOpen,
+                onClick: () => setChangesOpen((value) => !value),
+              },
+              h(DisclosureGlyph, { open: changesOpen }),
+              h('span', { className: 'dshgit-sectitle' }, t('changes')),
+            ),
+            h('span', { className: 'dshgit-grow' }),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'dshgit-iconbtn dshgit-tip',
+                'data-tip': t('refresh'),
+                'aria-label': t('refresh'),
+                disabled: state.phase === 'loading',
+                onClick: refresh,
+              },
+              h(RefreshGlyph, { size: 14 }),
+            ),
+          ),
+          changesOpen
+            ? h(
+                'div',
+                { className: 'dshgit-emptywrap' },
+                h('div', { className: 'dshgit-emptycard' }, content),
+              )
+            : null,
+        )
+
       let body
       if (cwd === undefined || cwd === null || cwd === '') {
-        body = h('div', { className: 'dshgit-empty' }, t('noWorkspace'))
+        body = emptyShell(h('div', { className: 'dshgit-emptytext' }, t('noWorkspace')))
       } else if (data === null && error !== null) {
-        body = h(
-          'div',
-          { className: 'dshgit-empty' },
-          h('div', { className: 'dshgit-error' }, message(t, 'error', { message: error })),
-          h('button', { type: 'button', className: 'dshgit-retry', onClick: refresh }, t('retry')),
-        )
+        body = emptyShell([
+          h(
+            'div',
+            { key: 'error', className: 'dshgit-emptytext dshgit-empty-error' },
+            message(t, 'error', { message: error }),
+          ),
+          h(
+            'button',
+            { key: 'retry', type: 'button', className: 'dshgit-emptyretry', onClick: refresh },
+            t('retry'),
+          ),
+        ])
       } else if (data === null) {
-        body = h('div', { className: 'dshgit-empty' }, t('loading'))
+        body = emptyShell(h('div', { className: 'dshgit-emptytext' }, t('loading')))
       } else if (data.isRepo !== true) {
-        body = h(
-          'div',
-          { className: 'dshgit-empty' },
-          h('div', null, t(data.gitMissing === true ? 'gitMissing' : 'notRepo')),
-          h('div', { className: 'dshgit-empty-path' }, data.cwd),
-        )
+        body = emptyShell([
+          h(
+            'div',
+            { key: 'message', className: 'dshgit-emptytext' },
+            t(data.gitMissing === true ? 'gitMissing' : 'notRepo'),
+          ),
+          h('div', { key: 'path', className: 'dshgit-empty-path' }, data.cwd),
+        ])
       } else if (diffView !== null) {
         body = h(DiffView, {
           view: diffView,
@@ -3047,6 +3100,14 @@ window.__ModuleLoader__.load({
       '.dshgit-pane-top{flex:0 0 auto}',
       '.dshgit-pane-bottom{flex:1 1 0}',
       '.dshgit-pane-closed{overflow:visible}',
+      '.dshgit-pane-empty{flex:1 1 auto}',
+      '.dshgit-emptywrap{flex:1 1 auto;min-height:0;overflow:auto;padding:12px 10px}',
+      '.dshgit-emptycard{display:flex;flex-direction:column;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:14px;background:var(--dsw-alias-bg-layer-1);padding:14px 14px 12px;box-shadow:0 8px 24px rgba(0,0,0,.08)}',
+      '.dshgit-emptytext{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.6;word-break:break-word}',
+      '.dshgit-empty-error{color:var(--dsw-alias-state-error-primary)}',
+      '.dshgit-emptycard .dshgit-empty-path{margin-top:6px;font-size:11px}',
+      '.dshgit-emptyretry{align-self:flex-start;margin-top:10px;padding:4px 10px;border-radius:5px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-emptyretry:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-list{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 6px 8px;scrollbar-gutter:stable}',
       '.dshgit-filterrow{flex:none;padding:6px 8px 0}',
       '.dshgit-filter{box-sizing:border-box;width:100%;height:26px;padding:0 8px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:11px;outline:none}',
