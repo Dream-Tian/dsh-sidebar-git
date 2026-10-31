@@ -1867,7 +1867,7 @@ window.__ModuleLoader__.load({
         )
       }
 
-      const loadBranches = () => {
+      const loadBranches = (silent) => {
         setBranchLoading(true)
         fetch('api/git-panel/branches', {
           method: 'POST',
@@ -1883,9 +1883,22 @@ window.__ModuleLoader__.load({
             }
             setBranches(Array.isArray(value.branches) ? value.branches : [])
           })
-          .catch((error) => setWriteError(error instanceof Error ? error.message : String(error)))
+          .catch((error) => {
+            if (silent !== true) setWriteError(error instanceof Error ? error.message : String(error))
+          })
           .finally(() => setBranchLoading(false))
       }
+
+      // Warm the branch list before the first click so the menu opens with its
+      // content instead of a loading row that resizes under the pointer.
+      React.useEffect(() => {
+        if (!visible || cwd === undefined || cwd === null || cwd === '' || state.data === null) return
+        if (state.data.isRepo !== true) return
+        loadBranches(true)
+        // `state.data.isRepo` is the only field this effect depends on; a
+        // snapshot refresh must not re-fetch the list every 8 seconds.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [visible, cwd, state.data === null ? false : state.data.isRepo])
 
       /** Anchor the branch popover under its trigger in the Graph header. */
       const toggleBranchMenu = (event) => {
@@ -1899,14 +1912,19 @@ window.__ModuleLoader__.load({
         const viewportH = window.innerHeight || 600
         const panelLeft = rootRect === undefined ? 0 : rootRect.left
         const panelWidth = rootRect === undefined ? viewportW : rootRect.width
-        const width = Math.min(264, panelWidth - 12, viewportW - 16)
+        const width = Math.min(232, panelWidth - 12, viewportW - 16)
         const left = Math.max(panelLeft + 6, Math.min(rect.right - width, panelLeft + panelWidth - width - 6))
         const below = viewportH - rect.bottom - 12
         const above = rect.top - 12
-        const openUp = below < 220 && above > below
-        const maxHeight = Math.max(140, Math.min(360, openUp ? above : below))
-        const top = openUp ? Math.max(8, rect.bottom - 4 - maxHeight) : rect.bottom + 4
-        setBranchAnchor({ left, top, width, maxHeight })
+        const openUp = below < 200 && above > below
+        const maxHeight = Math.max(140, Math.min(320, openUp ? above : below))
+        // Anchor the popover's near edge to the trigger: `bottom` when it opens
+        // upward, otherwise `top`. Anchoring by the far edge (maxHeight) would
+        // leave a gap whenever the content is shorter than the cap.
+        const anchor = { left, width, maxHeight }
+        if (openUp) anchor.bottom = viewportH - rect.top + 4
+        else anchor.top = rect.bottom + 4
+        setBranchAnchor(anchor)
         setBranchMenuOpen(true)
         setCommitMenuOpen(false)
         setBranchInput('')
@@ -2315,7 +2333,7 @@ window.__ModuleLoader__.load({
           { className: 'dshgit-pane dshgit-pane-top', style: changesPaneStyle },
           h(
             'div',
-            { className: 'dshgit-sechead' },
+            { className: 'dshgit-sechead dshgit-sechead-top' },
             h(
               'button',
               {
@@ -2600,17 +2618,19 @@ window.__ModuleLoader__.load({
                     ? undefined
                     : {
                         left: branchAnchor.left + 'px',
-                        top: branchAnchor.top + 'px',
                         width: branchAnchor.width + 'px',
                         maxHeight: branchAnchor.maxHeight + 'px',
+                        ...(branchAnchor.top === undefined
+                          ? { bottom: branchAnchor.bottom + 'px' }
+                          : { top: branchAnchor.top + 'px' }),
                       },
               },
               h('div', { className: 'dshgit-pop-title' }, t('branches')),
-              branchLoading
-                ? h('div', { className: 'dshgit-pop-empty' }, t('loading'))
-                : branches.length === 0
-                  ? h('div', { className: 'dshgit-pop-empty' }, t('noBranches'))
-                  : branches.map((branch) =>
+              branches.length === 0
+                ? branchLoading
+                  ? h('div', { className: 'dshgit-pop-empty' }, t('loading'))
+                  : h('div', { className: 'dshgit-pop-empty' }, t('noBranches'))
+                : branches.map((branch) =>
                       h(
                         'button',
                         {
@@ -2887,7 +2907,8 @@ window.__ModuleLoader__.load({
 
     const CSS = [
       '.dshgit-root{position:relative;height:100%;min-height:0;display:flex;flex-direction:column;color:var(--dsw-alias-label-primary);font-size:var(--dsh-content-font-size-secondary,12px);line-height:1.45;background:var(--dsw-specific-sidebar-fill,var(--dsw-alias-bg-base))}',
-      '.dshgit-sechead{flex:none;display:flex;align-items:center;gap:2px;min-height:32px;padding:0 4px 0 5px;border-bottom:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));user-select:none}',
+      '.dshgit-sechead{flex:none;display:flex;align-items:center;gap:2px;min-height:32px;padding:0 4px 0 8px;border-bottom:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));user-select:none}',
+      '.dshgit-sechead-top{height:37.5px;min-height:37.5px;border-bottom-color:var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
       '.dshgit-sechead-graph{padding-right:3px}',
       '.dshgit-secdisclosure{display:flex;align-items:center;gap:5px;min-width:0;height:24px;padding:0 4px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}',
       '.dshgit-secdisclosure:hover{background:var(--dsw-alias-interactive-bg-hover)}',
@@ -2953,23 +2974,25 @@ window.__ModuleLoader__.load({
       '.dshgit-notice{padding:0 2px;color:var(--dsw-alias-state-success-primary);font-size:10px;line-height:1.4}',
       '.dshgit-clean{display:flex;align-items:center;gap:6px;padding:6px 8px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
       '.dshgit-global-error{margin:6px 8px 0}',
+      '@keyframes dshgit-pop-in{from{opacity:0;transform:translateY(-3px) scale(.985)}to{opacity:1;transform:none}}',
+      '@media (prefers-reduced-motion:reduce){.dshgit-popover,.dshgit-menu{animation:none}}',
       '.dshgit-backdrop{position:fixed;inset:0;z-index:30}',
-      '.dshgit-popover{position:fixed;z-index:31;display:flex;flex-direction:column;gap:2px;overflow:auto;padding:6px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);background:color-mix(in srgb,var(--dsw-alias-bg-overlay) 94%,transparent);box-shadow:0 18px 44px rgba(0,0,0,.32);backdrop-filter:blur(16px)}',
-      '.dshgit-pop-title{padding:0 2px 4px;font-size:11px;font-weight:500;color:var(--dsw-alias-label-secondary)}',
+      '.dshgit-popover{position:fixed;z-index:31;display:flex;flex-direction:column;gap:1px;overflow:auto;padding:4px 4px 5px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);background:color-mix(in srgb,var(--dsw-alias-bg-overlay) 94%,transparent);box-shadow:0 14px 34px rgba(0,0,0,.3);backdrop-filter:blur(16px);transform-origin:top right;animation:dshgit-pop-in 140ms cubic-bezier(.2,.8,.2,1)}',
+      '.dshgit-pop-title{padding:1px 4px 3px;font-size:10px;font-weight:600;color:var(--dsw-alias-label-tertiary)}',
       '.dshgit-pop-empty{padding:4px 6px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
-      '.dshgit-pop-item{display:flex;align-items:center;gap:6px;width:100%;padding:5px 6px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dshgit-pop-item{display:flex;align-items:center;gap:6px;width:100%;padding:4px 6px;border:none;border-radius:4px;background:0 0;color:inherit;font:inherit;font-size:12px;text-align:left;cursor:pointer}',
       '.dshgit-pop-item:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-pop-item:disabled{opacity:.55;cursor:default}',
       '.dshgit-pop-item:disabled:hover{background:0 0}',
       '.dshgit-pop-text{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}',
       '.dshgit-pop-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.dshgit-pop-check{margin-left:auto;flex:none;color:var(--dsw-static-deepseek-500,#4176e6)}',
-      '.dshgit-pop-form{display:flex;gap:5px;margin-top:4px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
-      '.dshgit-pop-form .dshgit-filter{flex:1 1 auto;width:auto;min-width:0}',
-      '.dshgit-pop-open{flex:none;height:26px;padding:0 10px;border:none;border-radius:6px;background:var(--dsw-static-deepseek-500,#4176e6);color:#fff;font:inherit;font-size:11px;cursor:pointer}',
+      '.dshgit-pop-form{display:flex;gap:4px;margin-top:3px;padding-top:5px;border-top:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1))}',
+      '.dshgit-pop-form .dshgit-filter{flex:1 1 auto;width:auto;min-width:0;height:24px;padding:0 6px;border-radius:4px;font-size:11px}',
+      '.dshgit-pop-open{flex:none;height:24px;padding:0 8px;border:none;border-radius:4px;background:var(--dsw-static-deepseek-500,#4176e6);color:#fff;font:inherit;font-size:11px;cursor:pointer}',
       '.dshgit-pop-open:disabled{opacity:.5;cursor:default}',
-      '.dshgit-menu{position:fixed;z-index:41;min-width:172px;padding:4px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 28px rgba(0,0,0,.22)}',
-      '.dshgit-commitmenu{padding:5px}',
+      '.dshgit-menu{position:fixed;z-index:41;min-width:172px;padding:4px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 28px rgba(0,0,0,.22);transform-origin:top right;animation:dshgit-pop-in 120ms cubic-bezier(.2,.8,.2,1)}',
+      '.dshgit-commitmenu{padding:4px}',
       '.dshgit-menuitem{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:none;border-radius:5px;background:0 0;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;text-align:left;cursor:pointer}',
       '.dshgit-menuitem:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-menuitem:disabled{opacity:.45;cursor:default}',
@@ -3053,7 +3076,7 @@ window.__ModuleLoader__.load({
       '.dshgit-detail-empty{padding:2px 4px 4px;color:var(--dsw-alias-label-tertiary);font-size:11px}',
       '.dshgit-detail-error{color:var(--dsw-alias-state-error-primary)}',
       '.dshgit-diff{flex:1;min-height:0;display:flex;flex-direction:column}',
-      '.dshgit-diffhead{flex:none;display:flex;align-items:center;gap:5px;height:34px;padding:0 6px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1));overflow:hidden}',
+      '.dshgit-diffhead{flex:none;display:flex;align-items:center;gap:5px;height:37.5px;padding:0 6px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1));overflow:hidden}',
       '.dshgit-diffname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}',
       '.dshgit-diffdir{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
       '.dshgit-diffbody{flex:1;min-height:0;overflow:auto;padding:4px 0 10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;line-height:1.55;tab-size:4}',
