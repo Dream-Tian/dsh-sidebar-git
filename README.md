@@ -18,8 +18,8 @@
 - 点提交展开该提交的文件列表（状态 + 增删行数），再点收起。
 - 支持「加载更多」和按消息/作者/hash 搜索已加载的提交。
 
-**仓库、分支与同步**
-- 顶部文件夹按钮切换仓库：当前会话目录、最近 8 个仓库、手动输入路径；每个会话记住自己的选择。
+**分支与同步**
+- 面板固定使用当前会话的工作目录；目录在仓库子目录里时自动向上找仓库根。
 - 点分支名打开分支菜单：切换本地分支、新建分支、Fetch、Pull（`--ff-only`）、Push。
 - ahead/behind 数字可以直接点：`↑` 推送，`↓` 拉取。
 
@@ -76,7 +76,7 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 
 1. 打开一个**工作目录在 Git 仓库里**的会话（子目录也可以，会自动向上找仓库根）。
 2. 在开始页点 **Git** 卡片，或从右侧栏的标签添加入口打开指南页再选 Git。
-3. 当前目录不是仓库时会直接提示；点文件夹按钮可以换一个仓库路径。
+3. 当前目录不是仓库时面板会直接提示，并给出会话目录路径。
 
 ### 暂存与提交
 
@@ -121,7 +121,7 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 .
 ├── host.js            # Host 半：/api 路由、参数校验、写操作串行
 ├── git.js             # Git 读写操作（status / log / numstat / show / diff / add / commit / branch / sync）
-├── client.js          # Client 半：改动列表、提交框、提交树、diff、分支与仓库菜单
+├── client.js          # Client 半：改动列表、提交框、提交树、diff、分支菜单
 ├── cordis.patch.yml   # bundle 挂载行（id: git-tab）
 ├── package.json
 ├── icon.svg
@@ -137,7 +137,6 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 - Pull 只支持 fast-forward；没有 merge、rebase、force push、cherry-pick 等操作。
 - 分支名限制为字母、数字和 `._/-`，不支持空格或非 ASCII 分支名。
 - 语法高亮和并排视图都是轻量实现：逐行 token、按顺序配对删除/新增行，不保证与完整 diff 算法一致。
-- 仓库选在会话工作区之外时，diff 和提交仍可用，但「打开文件」和「点行号打开」不可用（文件预览按会话工作区解析）。
 - 合并提交的文件列表和 diff 都以第一个父提交为基准。
 - 文件类型图标按扩展名映射，未覆盖的扩展名使用通用文档图标。
 - 没有 stash、blame、submodule 或冲突解决界面。

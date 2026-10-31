@@ -18,9 +18,6 @@ window.__ModuleLoader__.load({
     const DEFAULT_SPLIT = 0.64
     /** Per-session storage key for the dragged split. */
     const SPLIT_PREFIX = 'dsh.gitPanel.split.v2.'
-    /** Per-session repository override and the shared recent list. */
-    const REPO_KEY_PREFIX = 'dsh.gitPanel.repo.v1.'
-    const RECENT_REPOS_KEY = 'dsh.gitPanel.recentRepos.v1'
     /** Diff view preferences, shared by every tab. */
     const DIFF_OPTIONS_KEY = 'dsh.gitPanel.diffOptions.v1'
     /** Stable empty list so the detail memo does not churn. */
@@ -80,12 +77,6 @@ window.__ModuleLoader__.load({
       loadMore: '加载更多提交',
       loadingMore: '加载中…',
       noMatches: '没有匹配项',
-      repository: '仓库',
-      useSessionDir: '使用会话目录',
-      recentRepos: '最近的仓库',
-      repoPathPlaceholder: '输入仓库路径…',
-      openRepo: '打开',
-      chooseRepo: '选择仓库',
       viewDiff: '查看差异',
       copyPath: '复制路径',
       reveal: '在 Finder 中显示',
@@ -99,7 +90,6 @@ window.__ModuleLoader__.load({
       confirmDiscard: '丢弃',
       confirmDelete: '删除',
       branches: '分支',
-      repoMenu: '仓库',
       newBranchPlaceholder: '新分支名…',
       createBranch: '新建分支',
       fetch: '获取',
@@ -166,12 +156,6 @@ window.__ModuleLoader__.load({
       loadMore: 'Load more commits',
       loadingMore: 'Loading…',
       noMatches: 'No matches',
-      repository: 'Repository',
-      useSessionDir: 'Use session directory',
-      recentRepos: 'Recent repositories',
-      repoPathPlaceholder: 'Repository path…',
-      openRepo: 'Open',
-      chooseRepo: 'Choose repository',
       viewDiff: 'View diff',
       copyPath: 'Copy path',
       reveal: 'Reveal in Finder',
@@ -185,7 +169,6 @@ window.__ModuleLoader__.load({
       confirmDiscard: 'Discard',
       confirmDelete: 'Delete',
       branches: 'Branches',
-      repoMenu: 'Repository',
       newBranchPlaceholder: 'New branch name…',
       createBranch: 'Create branch',
       fetch: 'Fetch',
@@ -267,27 +250,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    /** Folder glyph for the repository picker trigger. */
-    function FolderGlyph({ size = 14 }) {
-      return h(
-        'svg',
-        {
-          viewBox: '0 0 24 24',
-          width: size,
-          height: size,
-          fill: 'none',
-          stroke: 'currentColor',
-          strokeWidth: 1.7,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-          'aria-hidden': true,
-          focusable: false,
-        },
-        h('path', { d: 'M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2.5h8.5A1.5 1.5 0 0 1 21 10v7.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z' }),
-      )
-    }
-
-    /** Small chevron marking the repository picker. */
+    /** Small chevron marking the branch menu trigger. */
     function ChevronGlyph({ size = 10 }) {
       return h(
         'svg',
@@ -541,68 +504,6 @@ window.__ModuleLoader__.load({
         window.localStorage.setItem(DIFF_OPTIONS_KEY, JSON.stringify(options))
       } catch {
         // A blocked storage area only loses the preference.
-      }
-    }
-
-    /**
-     * Read the repository override chosen for one Session.
-     * @param {string} sessionId - current Session.
-     * @returns {string | null} an absolute path, or null for the Session directory.
-     */
-    function readRepoOverride(sessionId) {
-      try {
-        if (typeof window === 'undefined' || window.localStorage == null) return null
-        const value = window.localStorage.getItem(REPO_KEY_PREFIX + sessionId)
-        return typeof value === 'string' && value !== '' ? value : null
-      } catch {
-        return null
-      }
-    }
-
-    /**
-     * Persist or clear one Session's repository override.
-     * @param {string} sessionId - current Session.
-     * @param {string | null} value - absolute path, or null for the default.
-     */
-    function writeRepoOverride(sessionId, value) {
-      try {
-        if (typeof window === 'undefined' || window.localStorage == null) return
-        if (value === null || value === '') window.localStorage.removeItem(REPO_KEY_PREFIX + sessionId)
-        else window.localStorage.setItem(REPO_KEY_PREFIX + sessionId, value)
-      } catch {
-        // A blocked storage area only loses the preference.
-      }
-    }
-
-    /**
-     * Read the shared recent repository list.
-     * @returns {string[]} up to eight absolute paths, most recent first.
-     */
-    function readRecentRepos() {
-      try {
-        if (typeof window === 'undefined' || window.localStorage == null) return []
-        const raw = JSON.parse(window.localStorage.getItem(RECENT_REPOS_KEY) ?? '[]')
-        if (!Array.isArray(raw)) return []
-        return raw.filter((value) => typeof value === 'string' && value !== '').slice(0, 8)
-      } catch {
-        return []
-      }
-    }
-
-    /**
-     * Move one repository to the front of the shared recent list.
-     * @param {string} repoPath - resolved repository root.
-     */
-    function rememberRepo(repoPath) {
-      try {
-        if (typeof window === 'undefined' || window.localStorage == null) return
-        const recent = readRecentRepos()
-        if (recent[0] === repoPath) return
-        const list = recent.filter((value) => value !== repoPath)
-        list.unshift(repoPath)
-        window.localStorage.setItem(RECENT_REPOS_KEY, JSON.stringify(list.slice(0, 8)))
-      } catch {
-        // A blocked storage area only loses the list.
       }
     }
 
@@ -1580,10 +1481,6 @@ window.__ModuleLoader__.load({
       const [writing, setWriting] = React.useState(false)
       const [writeError, setWriteError] = React.useState(null)
       const [commitNotice, setCommitNotice] = React.useState(null)
-      const [repoOverride, setRepoOverride] = React.useState(() => readRepoOverride(sessionId))
-      const [repoPickerOpen, setRepoPickerOpen] = React.useState(false)
-      const [repoInput, setRepoInput] = React.useState('')
-      const [recentRepos, setRecentRepos] = React.useState(() => readRecentRepos())
       const [contextMenu, setContextMenu] = React.useState(null)
       const [confirmDiscard, setConfirmDiscard] = React.useState(null)
       const [branchMenuOpen, setBranchMenuOpen] = React.useState(false)
@@ -1591,7 +1488,6 @@ window.__ModuleLoader__.load({
       const [branchInput, setBranchInput] = React.useState('')
       const [branchLoading, setBranchLoading] = React.useState(false)
       const [diffOptions, setDiffOptions] = React.useState(() => readDiffOptions())
-      const activeCwd = repoOverride !== null && repoOverride !== '' ? repoOverride : cwd
       const bodyRef = React.useRef(null)
       const draggingRef = React.useRef(false)
       const detailCache = React.useRef(new Map())
@@ -1618,7 +1514,7 @@ window.__ModuleLoader__.load({
         setDiffState({ phase: 'idle', data: null, error: null })
         setExpanded(null)
         setDetail({ hash: null, phase: 'idle', files: NO_FILES, error: null })
-      }, [activeCwd])
+      }, [cwd])
 
       React.useEffect(() => {
         if (contextMenu === null && confirmDiscard === null) return undefined
@@ -1637,19 +1533,16 @@ window.__ModuleLoader__.load({
       }, [diffOptions])
 
       React.useEffect(() => {
-        if (!repoPickerOpen && !branchMenuOpen) return undefined
+        if (!branchMenuOpen) return undefined
         const onKey = (event) => {
-          if (event.key === 'Escape') {
-            setRepoPickerOpen(false)
-            setBranchMenuOpen(false)
-          }
+          if (event.key === 'Escape') setBranchMenuOpen(false)
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-      }, [repoPickerOpen, branchMenuOpen])
+      }, [branchMenuOpen])
 
       React.useEffect(() => {
-        if (activeCwd === undefined || activeCwd === null || activeCwd === '' || !visible) return undefined
+        if (cwd === undefined || cwd === null || cwd === '' || !visible) return undefined
         let cancelled = false
         let inFlight = false
         const controller = new AbortController()
@@ -1665,7 +1558,7 @@ window.__ModuleLoader__.load({
             const response = await fetch('api/git-panel/snapshot', {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ cwd: activeCwd, sessionCwd: cwd, limit }),
+              body: JSON.stringify({ cwd, sessionCwd: cwd, limit }),
               signal: controller.signal,
             })
             if (cancelled) return
@@ -1682,9 +1575,6 @@ window.__ModuleLoader__.load({
             }
             const value = await response.json()
             if (cancelled) return
-            if (value !== null && typeof value === 'object' && value.isRepo === true && typeof value.root === 'string') {
-              rememberRepo(value.root)
-            }
             setState({ phase: 'ready', data: value, error: null })
           } catch (error) {
             if (cancelled || controller.signal.aborted) return
@@ -1701,7 +1591,7 @@ window.__ModuleLoader__.load({
           controller.abort()
           clearInterval(timer)
         }
-      }, [activeCwd, visible, revision, limit])
+      }, [cwd, visible, revision, limit])
 
       const toggleCommit = (hash) => {
         if (expanded === hash) {
@@ -1721,7 +1611,7 @@ window.__ModuleLoader__.load({
         const controller = new AbortController()
         detailController.current = controller
         setDetail({ hash, phase: 'loading', files: NO_FILES, error: null })
-        fetchCommit(activeCwd, hash, controller.signal, cwd).then(
+        fetchCommit(cwd, hash, controller.signal, cwd).then(
           (files) => {
             if (controller.signal.aborted) return
             detailCache.current.set(hash, files)
@@ -1735,14 +1625,14 @@ window.__ModuleLoader__.load({
       }
 
       const openDiff = (file, rev) => {
-        if (activeCwd === undefined || activeCwd === null || activeCwd === '') return
+        if (cwd === undefined || cwd === null || cwd === '') return
         const target = rev === undefined ? null : rev
         diffController.current?.abort()
         const controller = new AbortController()
         diffController.current = controller
         setDiffView({ file, rev: target })
         setDiffState({ phase: 'loading', data: null, error: null })
-        fetchDiff(activeCwd, file, target, controller.signal).then(
+        fetchDiff(cwd, file, target, controller.signal).then(
           (value) => {
             if (controller.signal.aborted) return
             setDiffState({ phase: 'ready', data: value, error: null })
@@ -1788,7 +1678,7 @@ window.__ModuleLoader__.load({
 
       const changeStage = (file, mode) => {
         const target = mode === 'stage' ? 'api/git-panel/stage' : 'api/git-panel/unstage'
-        runWrite(target, { cwd: activeCwd, path: file.path }).then(
+        runWrite(target, { cwd, path: file.path }).then(
           () => setRevision((value) => value + 1),
           (error) => setWriteError(error instanceof Error ? error.message : String(error)),
         )
@@ -1796,7 +1686,7 @@ window.__ModuleLoader__.load({
 
       const changeStageAll = (mode) => {
         const target = mode === 'stage' ? 'api/git-panel/stage' : 'api/git-panel/unstage'
-        runWrite(target, { cwd: activeCwd }).then(
+        runWrite(target, { cwd }).then(
           () => setRevision((value) => value + 1),
           (error) => setWriteError(error instanceof Error ? error.message : String(error)),
         )
@@ -1805,7 +1695,7 @@ window.__ModuleLoader__.load({
       const commitStaged = () => {
         const text = commitMessage.trim()
         if (text === '' || writing) return
-        runWrite('api/git-panel/commit-create', { cwd: activeCwd, message: text }).then(
+        runWrite('api/git-panel/commit-create', { cwd, message: text }).then(
           (value) => {
             setCommitMessage('')
             setCommitNotice(
@@ -1817,36 +1707,12 @@ window.__ModuleLoader__.load({
         )
       }
 
-      const applyRepo = (value) => {
-        const target = typeof value === 'string' ? value.trim() : ''
-        if (target === '') return
-        setRepoOverride(target)
-        writeRepoOverride(sessionId, target)
-        setRepoInput('')
-        setRepoPickerOpen(false)
-        setRevision((current) => current + 1)
-      }
-
-      const useSessionDir = () => {
-        setRepoOverride(null)
-        writeRepoOverride(sessionId, null)
-        setRepoPickerOpen(false)
-        setRevision((current) => current + 1)
-      }
-
-      const toggleRepoPicker = () => {
-        setRecentRepos(readRecentRepos())
-        setRepoInput('')
-        setBranchMenuOpen(false)
-        setRepoPickerOpen((value) => !value)
-      }
-
       const loadBranches = () => {
         setBranchLoading(true)
         fetch('api/git-panel/branches', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ cwd: activeCwd }),
+          body: JSON.stringify({ cwd }),
         })
           .then(async (response) => {
             const value = await response.json().catch(() => null)
@@ -1862,7 +1728,6 @@ window.__ModuleLoader__.load({
       }
 
       const toggleBranchMenu = () => {
-        setRepoPickerOpen(false)
         const next = !branchMenuOpen
         setBranchMenuOpen(next)
         setBranchInput('')
@@ -1871,7 +1736,7 @@ window.__ModuleLoader__.load({
       }
 
       const switchToBranch = (name) => {
-        runWrite('api/git-panel/branch', { cwd: activeCwd, name }).then(
+        runWrite('api/git-panel/branch', { cwd, name }).then(
           () => {
             setBranchMenuOpen(false)
             setRevision((value) => value + 1)
@@ -1883,7 +1748,7 @@ window.__ModuleLoader__.load({
       const submitBranch = () => {
         const name = branchInput.trim()
         if (name === '' || writing) return
-        runWrite('api/git-panel/branch', { cwd: activeCwd, name, create: true }).then(
+        runWrite('api/git-panel/branch', { cwd, name, create: true }).then(
           () => {
             setBranchInput('')
             setBranchMenuOpen(false)
@@ -1895,7 +1760,7 @@ window.__ModuleLoader__.load({
 
       const sync = (action) => {
         setBranchMenuOpen(false)
-        runWrite('api/git-panel/sync', { cwd: activeCwd, action }).then(
+        runWrite('api/git-panel/sync', { cwd, action }).then(
           () => setRevision((value) => value + 1),
           (error) => setWriteError(error instanceof Error ? error.message : String(error)),
         )
@@ -1923,13 +1788,13 @@ window.__ModuleLoader__.load({
 
       const revealFile = (file) => {
         closeContextMenu()
-        runWrite('api/git-panel/reveal', { cwd: activeCwd, path: file.path }).catch((error) =>
+        runWrite('api/git-panel/reveal', { cwd, path: file.path }).catch((error) =>
           setWriteError(error instanceof Error ? error.message : String(error)),
         )
       }
 
       const discardFile = (file) => {
-        runWrite('api/git-panel/discard', { cwd: activeCwd, path: file.path, origPath: file.origPath }).then(
+        runWrite('api/git-panel/discard', { cwd, path: file.path, origPath: file.origPath }).then(
           () => setRevision((value) => value + 1),
           (error) => setWriteError(error instanceof Error ? error.message : String(error)),
         )
@@ -1996,19 +1861,8 @@ window.__ModuleLoader__.load({
           'button',
           {
             type: 'button',
-            className: 'dshgit-folderbtn',
-            title: t('repoMenu'),
-            'aria-label': t('repoMenu'),
-            onClick: toggleRepoPicker,
-          },
-          h(FolderGlyph, { size: 16 }),
-        ),
-        h(
-          'button',
-          {
-            type: 'button',
             className: 'dshgit-branchbtn',
-            title: data !== null && typeof data.root === 'string' ? data.root : activeCwd ?? '',
+            title: data !== null && typeof data.root === 'string' ? data.root : cwd ?? '',
             onClick: toggleBranchMenu,
           },
           h(GitGlyph, { size: 16, className: 'dshgit-head-glyph' }),
@@ -2080,17 +1934,8 @@ window.__ModuleLoader__.load({
       }
 
       let body
-      if (activeCwd === undefined || activeCwd === null || activeCwd === '') {
-        body = h(
-          'div',
-          { className: 'dshgit-empty' },
-          h('div', null, t('noWorkspace')),
-          h(
-            'button',
-            { type: 'button', className: 'dshgit-retry', onClick: toggleRepoPicker },
-            t('chooseRepo'),
-          ),
-        )
+      if (cwd === undefined || cwd === null || cwd === '') {
+        body = h('div', { className: 'dshgit-empty' }, t('noWorkspace'))
       } else if (data === null && error !== null) {
         body = h(
           'div',
@@ -2106,11 +1951,6 @@ window.__ModuleLoader__.load({
           { className: 'dshgit-empty' },
           h('div', null, t(data.gitMissing === true ? 'gitMissing' : 'notRepo')),
           h('div', { className: 'dshgit-empty-path' }, data.cwd),
-          h(
-            'button',
-            { type: 'button', className: 'dshgit-retry', onClick: toggleRepoPicker },
-            t('chooseRepo'),
-          ),
         )
       } else if (diffView !== null) {
         body = h(DiffView, {
@@ -2418,72 +2258,6 @@ window.__ModuleLoader__.load({
         )
       }
 
-      const rootPath = data !== null && typeof data.root === 'string' ? data.root : null
-      const visibleRecent = recentRepos.filter((value) => value !== rootPath).slice(0, 6)
-      const picker = repoPickerOpen
-        ? [
-            h('div', { key: 'backdrop', className: 'dshgit-backdrop', onClick: () => setRepoPickerOpen(false) }),
-            h(
-              'div',
-              { key: 'picker', className: 'dshgit-popover' },
-              h('div', { className: 'dshgit-pop-title' }, t('repository')),
-              h('div', { className: 'dshgit-pop-current' }, rootPath ?? t('notRepo')),
-              h(
-                'button',
-                { type: 'button', className: 'dshgit-pop-item', onClick: useSessionDir },
-                h('span', { className: 'dshgit-pop-name' }, t('useSessionDir')),
-                repoOverride === null ? h('span', { className: 'dshgit-pop-check' }, '✓') : null,
-              ),
-              visibleRecent.length === 0
-                ? null
-                : h('div', { className: 'dshgit-pop-label' }, t('recentRepos')),
-              ...visibleRecent.map((value) =>
-                  h(
-                    'button',
-                    {
-                      key: value,
-                      type: 'button',
-                      className: 'dshgit-pop-item',
-                      onClick: () => applyRepo(value),
-                    },
-                    h(
-                      'span',
-                      { className: 'dshgit-pop-text' },
-                      h(
-                        'span',
-                        { className: 'dshgit-pop-name' },
-                        baseName(value.replace(/\\/g, '/').replace(/\/+$/, '')) || value,
-                      ),
-                      h('span', { className: 'dshgit-pop-path' }, value),
-                    ),
-                  ),
-                ),
-              h(
-                'div',
-                { className: 'dshgit-pop-form' },
-                h('input', {
-                  className: 'dshgit-filter',
-                  value: repoInput,
-                  placeholder: t('repoPathPlaceholder'),
-                  onChange: (event) => setRepoInput(event.target.value),
-                  onKeyDown: (event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      applyRepo(repoInput)
-                    } else if (event.key === 'Escape') {
-                      setRepoPickerOpen(false)
-                    }
-                  },
-                }),
-                h(
-                  'button',
-                  { type: 'button', className: 'dshgit-pop-open', onClick: () => applyRepo(repoInput) },
-                  t('openRepo'),
-                ),
-              ),
-            ),
-          ]
-        : null
       const branchDisabled = data === null || data.isRepo !== true || data.detached === true
       const branchPicker = branchMenuOpen
         ? [
@@ -2736,7 +2510,6 @@ window.__ModuleLoader__.load({
         h('style', null, CSS),
         head,
         globalError,
-        picker,
         branchPicker,
         menu,
         dialog,
@@ -2751,8 +2524,6 @@ window.__ModuleLoader__.load({
       '.dshgit-branchbtn{display:flex;align-items:center;gap:5px;min-width:0;max-width:62%;padding:2px 4px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;cursor:pointer;overflow:hidden}',
       '.dshgit-branchbtn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-branchbtn svg{flex:none}',
-      '.dshgit-folderbtn{width:24px;height:24px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}',
-      '.dshgit-folderbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-abbtn{flex:none;height:18px;padding:0 4px;border:none;border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}',
       '.dshgit-abbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dshgit-syncrow{display:flex;gap:5px;margin-top:2px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
@@ -2766,13 +2537,10 @@ window.__ModuleLoader__.load({
       '.dshgit-backdrop{position:fixed;inset:0;z-index:30}',
       '.dshgit-popover{position:absolute;top:46px;left:6px;right:6px;z-index:31;display:flex;flex-direction:column;gap:2px;max-height:70%;overflow:auto;padding:6px;border-radius:var(--dsw-radius-md,8px);border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-1);box-shadow:0 12px 32px rgba(0,0,0,.35)}',
       '.dshgit-pop-title{padding:0 2px 2px;font-size:11px;font-weight:500;color:var(--dsw-alias-label-secondary)}',
-      '.dshgit-pop-current{padding:2px 2px 5px;color:var(--dsw-alias-label-tertiary);font-size:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}',
-      '.dshgit-pop-label{padding:4px 2px 1px;color:var(--dsw-alias-label-tertiary);font-size:10px}',
       '.dshgit-pop-item{display:flex;align-items:center;gap:6px;width:100%;padding:4px 6px;border:none;border-radius:var(--dsw-radius-sm,4px);background:0 0;color:inherit;font:inherit;text-align:left;cursor:pointer}',
       '.dshgit-pop-item:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dshgit-pop-text{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}',
       '.dshgit-pop-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      '.dshgit-pop-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary);font-size:10px}',
       '.dshgit-pop-check{margin-left:auto;flex:none;color:var(--dsw-alias-brand-primary)}',
       '.dshgit-pop-form{display:flex;gap:5px;margin-top:4px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
       '.dshgit-pop-form .dshgit-filter{flex:1 1 auto;width:auto;min-width:0}',
