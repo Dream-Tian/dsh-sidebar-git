@@ -30,6 +30,7 @@
 - 点文件在面板内打开统一 diff：双行号、红绿行、hunk 头、词级高亮。
 - 工具栏可切换「并排 / 统一」「只看改动」「语法高亮」；选项全局记住。
 - 点行号在侧栏文件预览里打开对应行（文件在当前会话工作区内时）。
+- 图片文件（png / jpg / jpeg / gif / webp / bmp / ico / avif / tif / tiff / svg）直接显示预览：改动前后并排（窄时上下排列），标注「更改前 / 更改后」、像素尺寸和字节大小；工具栏可在「图片 / 差异」之间切换，SVG 仍是先显示文本 diff、再按需切到图片。
 - 未跟踪文件会合成为「全部新增」的 diff；删除、重命名、二进制、过大文件都有单独提示。
 
 **其它**
@@ -75,6 +76,28 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 
 > 插件会随所有会话生效。卸载时从插件管理里移除 `dsh-sidebar-git` bundle 即可。
 
+## 更新
+
+不需要先卸载，按安装方式选一种：
+
+**GitHub 安装**：用同一条安装命令再装一次，会重新解析到最新提交并原位覆盖：
+
+```bash
+dsh plugin --profile <profile> add github:Dream-Tian/dsh-sidebar-git
+```
+
+想固定版本就把标签带上（每次更新换标签即可）：
+
+```bash
+dsh plugin --profile <profile> add github:Dream-Tian/dsh-sidebar-git#v0.1.1
+```
+
+**本地 link 安装**：`git pull`（或直接改代码）后，在插件管理里重新应用一次 bundle，或重启 Harness。
+
+**插件市场**里只有被目录收录的插件才有一键「更新」；从 GitHub 自定义安装的插件不在目录里，用上面的命令、或在市场的「自定义安装」里再填一次 GitHub 地址覆盖安装即可。
+
+更新后需要重启宿主（桌面端重启 App）并刷新页面。
+
 ## 使用
 
 1. 打开一个**工作目录在 Git 仓库里**的会话（子目录也可以，会自动向上找仓库根）。
@@ -109,13 +132,16 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 - 提交详情里的文件：对比该提交的第一个父提交。
 - 词级高亮只对成对的删除/新增行做公共前缀/后缀标记；并排视图按顺序配对删除与新增行。
 - 语法高亮是轻量的逐行 token 着色（注释、字符串、数字、关键字），多行字符串/跨行注释可能不准确，可以关掉。
+- 图片预览的字节不塞进 diff 响应：Host 用 `git cat-file` 或直接读工作区文件取出「更改前 / 更改后」的原始字节，浏览器通过 `GET /api/git-panel/image` 按 `<img>` 加载；每一侧最大 6 MiB，超过时显示大小提示。
+- 预览的每一侧都按文件内容签名嗅探真实格式，不信任扩展名：改名成 `.png` 的文本、符号链接、空文件、提交里变成目录的路径都不会被当成图片；响应带 `Content-Security-Policy`，即使单独打开 SVG 也不会执行脚本。
 - 二进制文件、空 diff、文件过大都有单独提示；Host 最多返回 512 KB diff（未跟踪文件超过 256 KB 不合成），前端最多渲染 4000 行。
 
 ## 工作方式
 
 - **Host 半**（`host.js`）：通过 Connection 注册需要浏览器认证的精确路由：
-  - 读：`snapshot`、`commit`、`diff`、`branches`
+  - 读：`snapshot`、`commit`、`diff`、`image`、`branches`
   - 写：`stage`、`unstage`、`commit-create`、`discard`、`reveal`、`branch`、`sync`
+  - `image` 是 `GET` 路由，直接返回图片字节和 MIME 类型；只接受图片扩展名、拒绝仓库外路径，样式为 `no-store`。
   - 写操作在 Host 内串行执行，避免并发操作 git index；丢弃改动由客户端二次确认。
 - **Git 操作**（`git.js`）：读操作使用 `rev-parse`、`status`、`log`、`diff`、`show`；写操作使用 `add`、`restore`、`rm --cached`、`commit`、`switch`、`fetch`、`pull --ff-only`、`push`。没有 shell 拼接，全部走参数数组。
 - **路径与参数**：拒绝绝对路径、`..`、NUL 和路径魔术（`--literal-pathspecs`）；未跟踪文件操作前用 `realpath` 确认仍在仓库内；分支名限制为安全的 ASCII 字符集。
@@ -123,9 +149,9 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 
 ```
 .
-├── host.js            # Host 半：/api 路由、参数校验、写操作串行
+├── host.js            # Host 半：/api 路由（含图片字节）、参数校验、写操作串行
 ├── git.js             # Git 读写操作（status / log / numstat / show / diff / add / commit / branch / sync）
-├── client.js          # Client 半：改动列表、提交框、提交树、diff、分支菜单
+├── client.js          # Client 半：改动列表、提交框、提交树、diff、图片预览、分支菜单
 ├── cordis.patch.yml   # bundle 挂载行（id: git-tab）
 ├── package.json
 ├── icon.svg
@@ -142,6 +168,9 @@ git clone https://github.com/Dream-Tian/dsh-sidebar-git.git
 - 分支名限制为字母、数字和 `._/-`，不支持空格或非 ASCII 分支名。
 - 语法高亮和并排视图都是轻量实现：逐行 token、按顺序配对删除/新增行，不保证与完整 diff 算法一致。
 - 合并提交的文件列表和 diff 都以第一个父提交为基准。
+- 纯图片改名（内容没变）也按图片预览两边；文本改名成图片扩展名时没有可预览的图片，按元数据变更显示。
+- 图片预览入口按扩展名判断（png / jpg / jpeg / gif / webp / bmp / ico / avif / tif / tiff / svg），没有扩展名的图片仍按二进制处理；能否真正显示由内容签名决定，改名成图片扩展名的文本不会被当成图片；非图片的二进制文件只显示提示。
+- 大于 6 MiB 的某一侧图片不预览，只显示字节大小。
 - 文件类型图标按扩展名映射，未覆盖的扩展名使用通用文档图标。
 - 没有 stash、blame、submodule 或冲突解决界面。
 

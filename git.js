@@ -6,7 +6,8 @@
  * `status`, `log`, `diff` and `show` never mutate the repository.
  */
 import { execFile } from 'node:child_process'
-import { readFile, realpath, rm, stat } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { lstat, open, readFile, realpath, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 
 /** Hard ceiling for one git invocation. */
@@ -21,6 +22,26 @@ const DIFF_LIMIT = 512 * 1024
 const UNTRACKED_LIMIT = 256 * 1024
 /** Lines rendered for one synthesized untracked diff. */
 const UNTRACKED_LINES = 5000
+/** Extensions previewed as a picture instead of only a text diff, with their MIME type. */
+const IMAGE_EXTENSIONS = new Map([
+  ['png', 'image/png'],
+  ['jpg', 'image/jpeg'],
+  ['jpeg', 'image/jpeg'],
+  ['gif', 'image/gif'],
+  ['webp', 'image/webp'],
+  ['bmp', 'image/bmp'],
+  ['ico', 'image/x-icon'],
+  ['avif', 'image/avif'],
+  ['tif', 'image/tiff'],
+  ['tiff', 'image/tiff'],
+  ['svg', 'image/svg+xml'],
+])
+/** Largest single image side the preview route sends. */
+const IMAGE_LIMIT = 6 * 1024 * 1024
+/** Bytes inspected when sniffing a picture, enough for long XML prologs. */
+const IMAGE_SNIFF_BYTES = 64 * 1024
+/** Blobs up to this size are read in full to confirm their format up front. */
+const IMAGE_SNIFF_LIMIT = 256 * 1024
 /** One commit record: hash, short hash, parents, refs, author, unix time, subject. */
 const LOG_FORMAT = '%H%x1f%h%x1f%P%x1f%D%x1f%an%x1f%at%x1f%s%x1e'
 
@@ -52,6 +73,41 @@ function runGit(dir, args, signal, timeoutMs = GIT_TIMEOUT_MS) {
         if (error !== null) {
           error.stdout = stdout
           error.stderr = stderr
+          reject(error)
+          return
+        }
+        resolve(stdout)
+      },
+    )
+  })
+}
+
+/**
+ * Run one read-only git command whose stdout is raw bytes, for image blobs.
+ * @param {string} dir - directory git treats as the working directory.
+ * @param {string[]} args - arguments after the global options.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<Buffer>} stdout.
+ */
+function runGitBuffer(dir, args, signal) {
+  return new Promise((resolve, reject) => {
+    execFile(
+      'git',
+      ['--no-pager', '-c', 'core.quotepath=false', '-C', dir, ...args],
+      {
+        timeout: GIT_TIMEOUT_MS,
+        maxBuffer: GIT_MAX_BUFFER,
+        encoding: 'buffer',
+        signal,
+        env: {
+          ...process.env,
+          GIT_TERMINAL_PROMPT: '0',
+          GIT_OPTIONAL_LOCKS: '0',
+          LC_ALL: 'C',
+        },
+      },
+      (error, stdout) => {
+        if (error !== null) {
           reject(error)
           return
         }
@@ -436,6 +492,302 @@ function insideRoot(root, target) {
 }
 
 /**
+ * MIME type of a path whose content is a picture, or null for everything else.
+ * @param {string} filePath - repository-relative path.
+ * @returns {string | null} the MIME type.
+ */
+function imageMime(filePath) {
+  const dot = filePath.lastIndexOf('.')
+  if (dot < 0) return null
+  return IMAGE_EXTENSIONS.get(filePath.slice(dot + 1).toLowerCase()) ?? null
+}
+
+/**
+ * Detect the real picture format of a buffer. Extensions alone must never be
+ * trusted: a renamed text file keeps the old bytes, a symlink stores its target
+ * path, and a repository can hold anything under any name.
+ * @param {Buffer} buffer - the bytes.
+ * @returns {string | null} the detected image MIME type, or null.
+ */
+function sniffImageMime(buffer) {
+  const bytes = (offset, length) => buffer.subarray(offset, offset + length)
+  const latin1 = (offset, length) => bytes(offset, length).toString('latin1')
+  if (buffer.length >= 8 && bytes(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return 'image/png'
+  }
+  if (buffer.length >= 3 && bytes(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return 'image/jpeg'
+  if (buffer.length >= 4 && latin1(0, 4) === 'GIF8') return 'image/gif'
+  if (buffer.length >= 12 && latin1(0, 4) === 'RIFF' && latin1(8, 4) === 'WEBP') return 'image/webp'
+  if (buffer.length >= 2 && latin1(0, 2) === 'BM') return 'image/bmp'
+  if (buffer.length >= 4 && bytes(0, 4).equals(Buffer.from([0x00, 0x00, 0x01, 0x00]))) return 'image/x-icon'
+  if (buffer.length >= 12 && latin1(4, 4) === 'ftyp') {
+    // AVIF may name `mif1` (or another brand) as its major brand and still list
+    // `avif`/`avis` among the compatible brands that follow the minor version.
+    const brands = latin1(8, Math.min(buffer.length - 8, 64))
+    if (brands.includes('avif') || brands.includes('avis')) return 'image/avif'
+  }
+  if (
+    buffer.length >= 4 &&
+    (bytes(0, 4).equals(Buffer.from([0x49, 0x49, 0x2a, 0x00])) ||
+      bytes(0, 4).equals(Buffer.from([0x4d, 0x4d, 0x00, 0x2a])) ||
+      bytes(0, 4).equals(Buffer.from([0x49, 0x49, 0x2b, 0x00])) ||
+      bytes(0, 4).equals(Buffer.from([0x4d, 0x4d, 0x00, 0x2b])))
+  ) {
+    return 'image/tiff'
+  }
+  // SVG may carry a BOM, a long prolog or comments before its root element, and
+  // the root element may use a namespace prefix such as `<svg:svg>`.
+  const head = buffer
+    .subarray(0, Math.min(buffer.length, IMAGE_SNIFF_BYTES))
+    .toString('utf8')
+    .replace(/^\uFEFF/, '')
+  if (/<(?:[\w.-]+:)?svg[\s>]/i.test(head)) return 'image/svg+xml'
+  return null
+}
+
+/**
+ * One side of an image change.
+ * @typedef {{ path: string, origPath: string | null, rev: string | null, untracked: boolean, side: 'before' | 'after' }} ImageSide
+ */
+
+/**
+ * Byte size of one blob, or null when the spec names a tree, a missing path,
+ * or anything else that is not a file blob.
+ * @param {string} root - repository root.
+ * @param {string} spec - `<rev>:<path>` or `HEAD:<path>`.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<number | null>} byte count, or null.
+ */
+async function gitBlobSize(root, spec, signal) {
+  const type = (await runGit(root, ['cat-file', '-t', spec], signal)).trim()
+  if (type !== 'blob') return null
+  const output = await runGit(root, ['cat-file', '-s', spec], signal)
+  const bytes = Number(output.trim())
+  return Number.isSafeInteger(bytes) && bytes >= 0 ? bytes : null
+}
+
+/**
+ * Read the leading bytes of one regular worktree file. Symlinks, directories,
+ * FIFOs, empty files and paths that resolve outside the repository are rejected
+ * without opening anything that could block.
+ * @param {string} root - repository root.
+ * @param {string} filePath - repository-relative path.
+ * @returns {Promise<{ head: Buffer, bytes: number } | null>} leading bytes and full size, or null.
+ */
+async function readWorktreeHead(root, filePath) {
+  const absolute = path.join(root, filePath)
+  try {
+    const stats = await lstat(absolute)
+    if (!stats.isFile() || stats.size === 0) return null
+    const real = await realpath(absolute)
+    const rootReal = await realpath(root)
+    if (!insideRoot(rootReal, real)) return null
+    const handle = await open(real, constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0))
+    try {
+      const info = await handle.stat()
+      if (!info.isFile() || info.size === 0) return null
+      const head = Buffer.alloc(Math.min(info.size, IMAGE_SNIFF_BYTES))
+      let offset = 0
+      while (offset < head.length) {
+        const { bytesRead } = await handle.read(head, offset, head.length - offset, offset)
+        if (bytesRead === 0) break
+        offset += bytesRead
+      }
+      return { head: head.subarray(0, offset), bytes: info.size }
+    } finally {
+      await handle.close()
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * File metadata of one regular blob in a tree, or null for trees, symlinks,
+ * empty blobs and missing paths.
+ * @param {string} root - repository root.
+ * @param {string} spec - `<tree-ish>:<path>` or `HEAD:<path>`.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<{ oid: string, bytes: number } | null>} blob identity and size.
+ */
+async function treeBlob(root, spec, signal) {
+  const at = spec.indexOf(':')
+  if (at < 0) return null
+  const treeish = spec.slice(0, at)
+  const relative = spec.slice(at + 1)
+  const output = await runGit(root, ['--literal-pathspecs', 'ls-tree', '-z', treeish, '--', relative], signal)
+  const record = output.split('\0').find((entry) => entry !== '')
+  if (record === undefined) return null
+  const tab = record.indexOf('\t')
+  if (tab < 0) return null
+  const [mode, type, oid] = record.slice(0, tab).split(' ')
+  if (type !== 'blob' || mode === '120000' || oid === undefined) return null
+  const size = Number((await runGit(root, ['cat-file', '-s', oid], signal)).trim())
+  if (!Number.isSafeInteger(size) || size <= 0) return null
+  return { oid, bytes: size }
+}
+
+/**
+ * Real format and byte size of one side of an image change, or null when that
+ * side is not a regular picture. Small blobs are read in full; larger ones keep
+ * the format their path claims so a click never copies megabytes just to sniff.
+ * @param {string} root - repository root.
+ * @param {ImageSide} side - the side to describe.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<{ mime: string, bytes: number } | null>} metadata, or null.
+ */
+async function imageSideInfo(root, side, signal) {
+  try {
+    if (side.side === 'after' && side.rev === null) {
+      const head = await readWorktreeHead(root, side.path)
+      if (head === null) return null
+      const mime = sniffImageMime(head.head)
+      return mime === null ? null : { mime, bytes: head.bytes }
+    }
+    const relative = side.side === 'before' ? (side.origPath ?? side.path) : side.path
+    let spec
+    if (side.side === 'after') {
+      spec = side.rev + ':' + relative
+    } else if (side.rev === null) {
+      if (side.untracked) return null
+      if (!(await hasHead(root, signal))) return null
+      spec = 'HEAD:' + relative
+    } else {
+      spec = side.rev + '^:' + relative
+    }
+    const blob = await treeBlob(root, spec, signal)
+    if (blob === null) return null
+    if (blob.bytes > IMAGE_SNIFF_LIMIT) {
+      const mime = imageMime(relative)
+      return mime === null ? null : { mime, bytes: blob.bytes }
+    }
+    const body = await runGitBuffer(root, ['cat-file', 'blob', blob.oid], signal)
+    const mime = sniffImageMime(body)
+    return mime === null ? null : { mime, bytes: blob.bytes }
+  } catch (error) {
+    if (signal?.aborted) throw error
+    return null
+  }
+}
+
+/**
+ * Describe one side of an image change for the Client, or null when that side
+ * is not a regular picture the preview route could serve.
+ * @param {string} root - repository root.
+ * @param {ImageSide} side - the side to describe.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<{ mime: string, bytes: number, tooLarge: boolean } | null>} metadata, or null.
+ */
+async function imageSideMeta(root, side, signal) {
+  const info = await imageSideInfo(root, side, signal)
+  if (info === null) return null
+  return { mime: info.mime, bytes: info.bytes, tooLarge: info.bytes > IMAGE_LIMIT }
+}
+
+/**
+ * Both sides of one image change, sniffed for the Client's preview layout. A
+ * side that is not really a picture (text renamed to `.png`, a symlink, an
+ * empty blob) is dropped here, so the Client never offers a broken preview.
+ * @param {string} root - repository root.
+ * @param {string} filePath - repository-relative path.
+ * @param {string | null} origPath - path before a rename, if any.
+ * @param {string | null} rev - commit to compare, or null for the working tree.
+ * @param {boolean} untracked - whether the working-tree file is untracked.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<{ mime: string, before: object | null, after: object | null } | null>} preview metadata.
+ */
+async function imagePreview(root, filePath, origPath, rev, untracked, signal) {
+  const beforePath = origPath ?? filePath
+  const watchBefore = imageMime(beforePath) !== null
+  const watchAfter = imageMime(filePath) !== null
+  if (!watchBefore && !watchAfter) return null
+  const base = { path: filePath, origPath, rev, untracked }
+  const [before, after] = await Promise.all([
+    watchBefore ? imageSideMeta(root, { ...base, side: 'before' }, signal) : null,
+    watchAfter ? imageSideMeta(root, { ...base, side: 'after' }, signal) : null,
+  ])
+  if (before === null && after === null) return null
+  return { mime: (after ?? before).mime, before, after }
+}
+
+/**
+ * Read one working-tree image for the preview route. Symlinks, directories,
+ * FIFOs and other specials are refused before opening, and the read is bounded
+ * by the size observed after opening, so a racing writer cannot exceed the cap.
+ * @param {string} root - repository root.
+ * @param {string} filePath - repository-relative path.
+ * @returns {Promise<{ mime: string, bytes: number, body: Buffer }>} the image.
+ */
+async function readWorktreeImage(root, filePath) {
+  const absolute = path.join(root, filePath)
+  let stats
+  try {
+    stats = await lstat(absolute)
+  } catch {
+    throw new Error('image is unavailable')
+  }
+  if (stats.isSymbolicLink() || !stats.isFile()) throw new Error('image is unavailable')
+  if (stats.size > IMAGE_LIMIT) throw new Error('image is too large to preview')
+  let real
+  try {
+    real = await realpath(absolute)
+    const rootReal = await realpath(root)
+    if (!insideRoot(rootReal, real)) throw new Error('image is unavailable')
+  } catch {
+    throw new Error('image is unavailable')
+  }
+  const flags = constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0)
+  let handle
+  try {
+    handle = await open(real, flags)
+  } catch {
+    throw new Error('image is unavailable')
+  }
+  try {
+    const info = await handle.stat()
+    if (!info.isFile()) throw new Error('image is unavailable')
+    if (info.size === 0) throw new Error('not an image')
+    if (info.size > IMAGE_LIMIT) throw new Error('image is too large to preview')
+    const body = Buffer.alloc(info.size)
+    let offset = 0
+    while (offset < info.size) {
+      const { bytesRead } = await handle.read(body, offset, info.size - offset, offset)
+      if (bytesRead === 0) break
+      offset += bytesRead
+    }
+    const image = body.subarray(0, offset)
+    const mime = sniffImageMime(image)
+    if (mime === null) throw new Error('not an image')
+    return { mime, bytes: image.byteLength, body: image }
+  } finally {
+    await handle.close()
+  }
+}
+
+/**
+ * Read one image blob out of the object database.
+ * @param {string} root - repository root.
+ * @param {string} spec - `<rev>:<path>` or `HEAD:<path>`.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<{ mime: string, bytes: number, body: Buffer }>} the image.
+ */
+async function readGitImage(root, spec, signal) {
+  let bytes
+  try {
+    bytes = await gitBlobSize(root, spec, signal)
+  } catch (error) {
+    if (signal?.aborted) throw error
+    throw new Error('image is unavailable')
+  }
+  if (bytes === null) throw new Error('image is unavailable')
+  if (bytes > IMAGE_LIMIT) throw new Error('image is too large to preview')
+  const body = await runGitBuffer(root, ['cat-file', 'blob', spec], signal)
+  const mime = sniffImageMime(body)
+  if (mime === null) throw new Error('not an image')
+  return { mime, bytes: body.byteLength, body }
+}
+
+/**
  * Synthesize a unified diff for an untracked file, which git has no baseline for.
  * @param {string} root - repository root.
  * @param {string} filePath - repository-relative path.
@@ -500,7 +852,9 @@ export async function fileDiff(cwd, request, signal) {
   const rawRev = typeof body.rev === 'string' && body.rev !== '' ? body.rev : null
   const rev = rawRev !== null && /^[0-9a-f]{4,64}$/i.test(rawRev) ? rawRev : null
   if (rawRev !== null && rev === null) throw new Error('rev is invalid')
-  if (rev === null && body.untracked === true) return untrackedDiff(root, filePath)
+  const untracked = body.untracked === true
+  const image = await imagePreview(root, filePath, origPath, rev, untracked, signal)
+  if (rev === null && untracked) return { ...(await untrackedDiff(root, filePath)), image }
   const paths = origPath === null || origPath === filePath ? ['--', filePath] : ['--', filePath, origPath]
   let diff = ''
   try {
@@ -549,7 +903,48 @@ export async function fileDiff(cwd, request, signal) {
     tooLarge: false,
     hasHunks: /^@@ /m.test(diff),
     empty: diff === '',
+    image,
   }
+}
+
+/**
+ * Raw bytes of one side of an image change, for the preview route.
+ * @param {string} cwd - the session's working directory.
+ * @param {object} request - `{ path, origPath?, rev?, side, untracked? }`.
+ * @param {AbortSignal | undefined} signal - request lifetime.
+ * @returns {Promise<{ mime: string, bytes: number, body: Buffer }>} the image.
+ */
+export async function imageBytes(cwd, request, signal) {
+  const resolved = await resolveRoot(cwd, signal)
+  if (resolved === null) throw new Error('not a git repository')
+  if ('missing' in resolved) throw new Error('git is not installed')
+  const root = resolved.root
+  const body = request !== null && typeof request === 'object' ? request : {}
+  const filePath = repoPath(body.path)
+  if (filePath === null) throw new Error('path is invalid')
+  const rawOrig = typeof body.origPath === 'string' && body.origPath !== '' ? body.origPath : null
+  const origPath = rawOrig === null ? null : repoPath(rawOrig)
+  if (rawOrig !== null && origPath === null) throw new Error('origPath is invalid')
+  const rawRev = typeof body.rev === 'string' && body.rev !== '' ? body.rev : null
+  const rev = rawRev !== null && /^[0-9a-f]{4,64}$/i.test(rawRev) ? rawRev : null
+  if (rawRev !== null && rev === null) throw new Error('rev is invalid')
+  const side = body.side === 'before' || body.side === 'after' ? body.side : null
+  if (side === null) throw new Error('side is invalid')
+  const relative = side === 'before' ? (origPath ?? filePath) : filePath
+  const mime = imageMime(relative)
+  if (mime === null) throw new Error('not an image')
+  if (side === 'after' && rev === null) return await readWorktreeImage(root, filePath)
+  let spec
+  if (side === 'after') {
+    spec = rev + ':' + relative
+  } else if (rev === null) {
+    if (body.untracked === true) throw new Error('no previous version')
+    if (!(await hasHead(root, signal))) throw new Error('no previous version')
+    spec = 'HEAD:' + relative
+  } else {
+    spec = rev + '^:' + relative
+  }
+  return await readGitImage(root, spec, signal)
 }
 
 /**

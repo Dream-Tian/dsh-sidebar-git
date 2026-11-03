@@ -50,6 +50,13 @@ window.__ModuleLoader__.load({
       diffError: '读取差异失败：{message}',
       diffBinary: '二进制文件，无法显示文本差异。',
       diffEmpty: '没有文本差异。',
+      imageView: '图片',
+      textView: '差异',
+      imageBefore: '更改前',
+      imageAfter: '更改后',
+      imageTooLarge: '图片太大，无法预览（{size}）。',
+      imageLoadFailed: '图片加载失败。',
+      imageMeta: '{width} × {height} · {size}',
       diffMetaOnly: '只有重命名或权限等元数据变更。',
       diffTruncated: '差异太大，只显示了开头部分。',
       diffTooLarge: '文件太大，无法显示差异。',
@@ -130,6 +137,13 @@ window.__ModuleLoader__.load({
       diffError: 'Could not read the diff: {message}',
       diffBinary: 'Binary file; no text diff to show.',
       diffEmpty: 'No text changes.',
+      imageView: 'Image',
+      textView: 'Diff',
+      imageBefore: 'Before',
+      imageAfter: 'After',
+      imageTooLarge: 'Image is too large to preview ({size}).',
+      imageLoadFailed: 'The image could not be loaded.',
+      imageMeta: '{width} × {height} · {size}',
       diffMetaOnly: 'Only metadata changed (rename, mode, …).',
       diffTruncated: 'The diff is too large; showing the beginning.',
       diffTooLarge: 'The file is too large to show a diff.',
@@ -555,6 +569,35 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Human-readable byte size.
+     * @param {number} bytes - size in bytes.
+     * @returns {string} a compact size such as `1.2 MB`.
+     */
+    function formatBytes(bytes) {
+      const value = Number(bytes)
+      if (!Number.isFinite(value) || value < 0) return ''
+      if (value < 1024) return Math.round(value) + ' B'
+      if (value < 1024 * 1024) return (value / 1024).toFixed(value < 10 * 1024 ? 1 : 0) + ' KB'
+      return (value / (1024 * 1024)).toFixed(1) + ' MB'
+    }
+
+    /**
+     * Authenticated URL of one side of an image change.
+     * @param {string} cwd - session directory.
+     * @param {object} file - the row being opened.
+     * @param {string | null} rev - commit to compare, or null for the working tree.
+     * @param {'before' | 'after'} side - which side to load.
+     * @returns {string} a document-relative URL.
+     */
+    function imageSideUrl(cwd, file, rev, side) {
+      const params = new URLSearchParams({ cwd, path: file.path, side })
+      if (typeof file.origPath === 'string' && file.origPath !== '') params.set('origPath', file.origPath)
+      if (rev !== null) params.set('rev', rev)
+      if (file.untracked === true) params.set('untracked', '1')
+      return 'api/git-panel/image?' + params.toString()
+    }
+
+    /**
      * Read the persisted split for one Session.
      * @param {string} sessionId - current Session.
      * @returns {number} a ratio between 0.2 and 0.8.
@@ -727,7 +770,7 @@ window.__ModuleLoader__.load({
       lock: ['LK', 'lock'],
     }
     /** Extensions drawn as a picture glyph instead of a letter badge. */
-    const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'avif', 'tiff', 'svg'])
+    const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'avif', 'tif', 'tiff', 'svg'])
 
     /**
      * Classification of one path for its leading icon.
@@ -1351,7 +1394,7 @@ window.__ModuleLoader__.load({
      * @param {object} file - the row being opened.
      * @param {string | null} rev - commit to compare, or null for the working tree.
      * @param {AbortSignal} signal - request lifetime.
-     * @returns {Promise<object>} `{ diff, binary, truncated, tooLarge, empty, hasHunks }`.
+     * @returns {Promise<object>} `{ diff, binary, truncated, tooLarge, empty, hasHunks, image }`.
      */
     async function fetchDiff(cwd, file, rev, signal) {
       const response = await fetch('api/git-panel/diff', {
@@ -1380,8 +1423,93 @@ window.__ModuleLoader__.load({
       return response.json()
     }
 
+    /** One side of an image change: the picture itself, or why it cannot be drawn. */
+    function ImagePane({ side, label, src, t }) {
+      const [failed, setFailed] = React.useState(false)
+      const [natural, setNatural] = React.useState(null)
+      React.useEffect(() => {
+        setFailed(false)
+        setNatural(null)
+      }, [src])
+      const tooLarge = side.tooLarge === true
+      let body
+      if (tooLarge) {
+        body = h(
+          'div',
+          { className: 'dshgit-imagemsg' },
+          message(t, 'imageTooLarge', { size: formatBytes(side.bytes) }),
+        )
+      } else if (failed) {
+        body = h('div', { className: 'dshgit-imagemsg' }, t('imageLoadFailed'))
+      } else {
+        body = h('img', {
+          className: 'dshgit-image',
+          src,
+          alt: label,
+          decoding: 'async',
+          onLoad: (event) => {
+            const picture = event.currentTarget
+            if (picture.naturalWidth > 0 && picture.naturalHeight > 0) {
+              setNatural({ width: picture.naturalWidth, height: picture.naturalHeight })
+            }
+          },
+          onError: () => setFailed(true),
+        })
+      }
+      const sizeText =
+        natural === null
+          ? formatBytes(side.bytes)
+          : message(t, 'imageMeta', {
+              width: natural.width,
+              height: natural.height,
+              size: formatBytes(side.bytes),
+            })
+      return h(
+        'figure',
+        { className: 'dshgit-imagepane', 'data-state': tooLarge ? 'large' : 'image' },
+        h(
+          'figcaption',
+          { className: 'dshgit-imagecap' },
+          h('span', { className: 'dshgit-imagecap-label' }, label),
+          tooLarge ? null : h('span', { className: 'dshgit-imagecap-size' }, sizeText),
+        ),
+        h('div', { className: 'dshgit-imageframe' }, body),
+      )
+    }
+
+    /** Before/after pictures of one image change. */
+    function ImagePreview({ image, cwd, file, rev, t }) {
+      const before = image.before === undefined ? null : image.before
+      const after = image.after === undefined ? null : image.after
+      const panes = []
+      if (before !== null) {
+        panes.push(
+          h(ImagePane, {
+            key: 'before',
+            side: before,
+            label: t('imageBefore'),
+            src: imageSideUrl(cwd, file, rev, 'before'),
+            t,
+          }),
+        )
+      }
+      if (after !== null) {
+        panes.push(
+          h(ImagePane, {
+            key: 'after',
+            side: after,
+            label: t('imageAfter'),
+            src: imageSideUrl(cwd, file, rev, 'after'),
+            t,
+          }),
+        )
+      }
+      if (panes.length === 0) return h('div', { className: 'dshgit-empty' }, t('diffBinary'))
+      return h('div', { className: 'dshgit-imagebody' }, panes)
+    }
+
     /** The unified diff view that replaces both lists while one file is open. */
-    function DiffView({ view, state, options, onOptions, onBack, onReload, sessionId, tab, t }) {
+    function DiffView({ view, state, options, onOptions, onBack, onReload, sessionId, cwd, tab, t }) {
       const file = view.file
       const letter =
         view.rev === null
@@ -1402,6 +1530,22 @@ window.__ModuleLoader__.load({
             : NO_FILES,
         [state.phase, data],
       )
+      const image =
+        data !== null && data.image !== null && data.image !== undefined && typeof data.image === 'object'
+          ? data.image
+          : null
+      const imageAvailable =
+        image !== null &&
+        ((image.before !== null && image.before !== undefined) ||
+          (image.after !== null && image.after !== undefined))
+      // Prefer the picture whenever the change has no text hunk to read. The
+      // Host only advertises sides that really are pictures, so a pure image
+      // rename or a mode-only change also lands on the preview; a text file
+      // renamed to `.png` has no picture sides and keeps its meta/text view.
+      const hasTextDiff = data !== null && data.hasHunks === true
+      const [imageMode, setImageMode] = React.useState(null)
+      React.useEffect(() => setImageMode(null), [file.path, view.rev])
+      const showImage = imageAvailable && (imageMode === null ? !hasTextDiff : imageMode === 'image')
       const hasChanges = lines.some((line) => line.type === 'add' || line.type === 'del')
       const visible = options.changesOnly ? lines.filter((line) => line.type !== 'ctx') : lines
       const shownLines = visible.length > DIFF_RENDER_LINES ? visible.slice(0, DIFF_RENDER_LINES) : visible
@@ -1431,6 +1575,8 @@ window.__ModuleLoader__.load({
           h('div', { className: 'dshgit-error' }, message(t, 'diffError', { message: state.error })),
           h('button', { type: 'button', className: 'dshgit-retry', onClick: onReload }, t('retry')),
         )
+      } else if (showImage) {
+        content = h(ImagePreview, { image, cwd, file, rev: view.rev, t })
       } else if (data !== null && data.binary === true) {
         content = h('div', { className: 'dshgit-empty' }, t('diffBinary'))
       } else if (data !== null && data.tooLarge === true) {
@@ -1516,6 +1662,71 @@ window.__ModuleLoader__.load({
         }
       }
 
+      const tools = []
+      if (imageAvailable) {
+        tools.push(
+          h(
+            'button',
+            {
+              key: 'image',
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': showImage,
+              onClick: () => setImageMode(showImage ? 'diff' : 'image'),
+            },
+            t('imageView'),
+          ),
+          h(
+            'button',
+            {
+              key: 'text',
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': !showImage,
+              onClick: () => setImageMode('diff'),
+            },
+            t('textView'),
+          ),
+        )
+      }
+      if (!showImage) {
+        tools.push(
+          h(
+            'button',
+            {
+              key: 'split',
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': options.split,
+              onClick: () => onOptions({ ...options, split: !options.split }),
+            },
+            t('splitView'),
+          ),
+          h(
+            'button',
+            {
+              key: 'changes',
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': options.changesOnly,
+              onClick: () => onOptions({ ...options, changesOnly: !options.changesOnly }),
+            },
+            t('changesOnly'),
+          ),
+          h(
+            'button',
+            {
+              key: 'syntax',
+              type: 'button',
+              className: 'dshgit-modebtn',
+              'aria-pressed': options.syntax,
+              onClick: () => onOptions({ ...options, syntax: !options.syntax }),
+            },
+            t('syntaxHighlight'),
+          ),
+        )
+      }
+
       return h(
         'div',
         { className: 'dshgit-diff' },
@@ -1565,40 +1776,7 @@ window.__ModuleLoader__.load({
             h(RefreshGlyph, {}),
           ),
         ),
-        h(
-          'div',
-          { className: 'dshgit-difftools' },
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': options.split,
-              onClick: () => onOptions({ ...options, split: !options.split }),
-            },
-            t('splitView'),
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': options.changesOnly,
-              onClick: () => onOptions({ ...options, changesOnly: !options.changesOnly }),
-            },
-            t('changesOnly'),
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': options.syntax,
-              onClick: () => onOptions({ ...options, syntax: !options.syntax }),
-            },
-            t('syntaxHighlight'),
-          ),
-        ),
+        h('div', { className: 'dshgit-difftools' }, tools),
         content,
       )
     }
@@ -2295,6 +2473,7 @@ window.__ModuleLoader__.load({
           onBack: closeDiff,
           onReload: reloadDiff,
           sessionId,
+          cwd,
           tab,
           t,
         })
@@ -3259,6 +3438,14 @@ window.__ModuleLoader__.load({
       '.dshgit-difftools{flex:none;display:flex;gap:4px;padding:4px 8px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
       '.dshgit-modebtn{height:20px;padding:0 7px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:10px;cursor:pointer}',
       '.dshgit-modebtn[aria-pressed=true]{color:var(--dsw-alias-brand-primary);border-color:currentColor;background:color-mix(in srgb,currentColor 10%,transparent)}',
+      '.dshgit-imagebody{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding:8px;align-content:start}',
+      '.dshgit-imagepane{min-width:0;margin:0;display:flex;flex-direction:column;gap:4px}',
+      '.dshgit-imagecap{display:flex;align-items:baseline;justify-content:space-between;gap:6px;font-size:10px;color:var(--dsw-alias-label-tertiary)}',
+      '.dshgit-imagecap-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dshgit-imagecap-size{flex:none;font-variant-numeric:tabular-nums;opacity:.85}',
+      '.dshgit-imageframe{display:flex;align-items:center;justify-content:center;min-height:72px;padding:6px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1));background:var(--dsw-alias-bg-layer-2);background-image:linear-gradient(45deg,rgba(127,127,127,.1) 25%,transparent 25%,transparent 75%,rgba(127,127,127,.1) 75%),linear-gradient(45deg,rgba(127,127,127,.1) 25%,transparent 25%,transparent 75%,rgba(127,127,127,.1) 75%);background-size:12px 12px;background-position:0 0,6px 6px;overflow:hidden}',
+      '.dshgit-image{display:block;max-width:100%;max-height:46vh;object-fit:contain;border-radius:3px}',
+      '.dshgit-imagemsg{padding:16px 8px;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:1.5;text-align:center;word-break:break-word}',
       '.dshgit-splitrow{display:grid;grid-template-columns:1fr 1fr;min-width:0}',
       '.dshgit-splitcell{display:flex;align-items:flex-start;min-width:0;overflow:hidden;white-space:pre}',
       '.dshgit-splitcell + .dshgit-splitcell{border-left:1px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',

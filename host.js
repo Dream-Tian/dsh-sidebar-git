@@ -15,6 +15,7 @@ import {
   createBranch,
   discardChanges,
   fileDiff,
+  imageBytes,
   listBranches,
   revealInFileManager,
   snapshot,
@@ -33,6 +34,7 @@ export const inject = ['connection']
 const SNAPSHOT_ROUTE = '/api/git-panel/snapshot'
 const COMMIT_ROUTE = '/api/git-panel/commit'
 const DIFF_ROUTE = '/api/git-panel/diff'
+const IMAGE_ROUTE = '/api/git-panel/image'
 const STAGE_ROUTE = '/api/git-panel/stage'
 const UNSTAGE_ROUTE = '/api/git-panel/unstage'
 const COMMIT_CREATE_ROUTE = '/api/git-panel/commit-create'
@@ -63,6 +65,42 @@ const HASH_PATTERN = /^[0-9a-f]{4,64}$/i
 /** Default and maximum commits returned to the panel. */
 const DEFAULT_LIMIT = 60
 const MAX_LIMIT = 1000
+/** Image-route failures the browser is allowed to see verbatim. */
+const IMAGE_BAD_REQUEST = new Set([
+  'path is invalid',
+  'origPath is invalid',
+  'rev is invalid',
+  'side is invalid',
+  'not an image',
+  'not a file',
+])
+/** Image-route failures that mean the requested picture is not there. */
+const IMAGE_NOT_FOUND = new Set([
+  'no previous version',
+  'image is unavailable',
+  'file is outside the repository',
+  'not a git repository',
+  'git is not installed',
+])
+/** The image body is left inert when opened as a document of its own. */
+const IMAGE_SECURITY_HEADERS = {
+  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:",
+  'x-content-type-options': 'nosniff',
+}
+
+/**
+ * Turn one image-route failure into a response. Unexpected errors (filesystem,
+ * git) are not repeated: their messages carry absolute paths.
+ * @param {unknown} error - whatever `imageBytes` rejected with.
+ * @returns {Response} the error response.
+ */
+function imageError(error) {
+  const message = error instanceof Error ? error.message : ''
+  if (IMAGE_BAD_REQUEST.has(message)) return json({ error: message }, 400)
+  if (IMAGE_NOT_FOUND.has(message)) return json({ error: message }, 404)
+  if (message === 'image is too large to preview') return json({ error: message }, 413)
+  return json({ error: 'image is unavailable' }, 500)
+}
 
 /**
  * One JSON response with the panel's no-store policy.
@@ -177,6 +215,47 @@ export function apply(ctx) {
         },
       }),
     'git-panel: diff route',
+  )
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: IMAGE_ROUTE,
+        methods: ['GET'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          const params = new URL(request.url).searchParams
+          const cwd = params.get('cwd') ?? ''
+          const path = params.get('path') ?? ''
+          if (cwd === '') return json({ error: 'cwd is required' }, 400)
+          if (path === '') return json({ error: 'path is required' }, 400)
+          try {
+            const image = await imageBytes(
+              cwd,
+              {
+                path,
+                origPath: params.get('origPath'),
+                rev: params.get('rev'),
+                side: params.get('side'),
+                untracked: params.get('untracked') === '1',
+              },
+              request.signal,
+            )
+            return new Response(image.body, {
+              status: 200,
+              headers: {
+                'content-type': image.mime,
+                'content-length': String(image.body.byteLength),
+                'cache-control': 'no-store',
+                ...IMAGE_SECURITY_HEADERS,
+              },
+            })
+          } catch (error) {
+            if (request.signal?.aborted) return new Response(null, { status: 499 })
+            return imageError(error)
+          }
+        },
+      }),
+    'git-panel: image route',
   )
   ctx.effect(
     () =>
