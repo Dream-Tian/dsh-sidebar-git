@@ -50,8 +50,6 @@ window.__ModuleLoader__.load({
       diffError: '读取差异失败：{message}',
       diffBinary: '二进制文件，无法显示文本差异。',
       diffEmpty: '没有文本差异。',
-      imageView: '图片',
-      textView: '差异',
       imageBefore: '更改前',
       imageAfter: '更改后',
       imageTooLarge: '图片太大，无法预览（{size}）。',
@@ -107,7 +105,6 @@ window.__ModuleLoader__.load({
       noBranches: '没有本地分支',
       splitView: '并排',
       changesOnly: '只看改动',
-      syntaxHighlight: '语法高亮',
       openAtLine: '打开第 {line} 行',
       dragHint: '拖动调整上下两栏高度',
     }
@@ -137,8 +134,6 @@ window.__ModuleLoader__.load({
       diffError: 'Could not read the diff: {message}',
       diffBinary: 'Binary file; no text diff to show.',
       diffEmpty: 'No text changes.',
-      imageView: 'Image',
-      textView: 'Diff',
       imageBefore: 'Before',
       imageAfter: 'After',
       imageTooLarge: 'Image is too large to preview ({size}).',
@@ -194,7 +189,6 @@ window.__ModuleLoader__.load({
       noBranches: 'No local branches',
       splitView: 'Split',
       changesOnly: 'Changes only',
-      syntaxHighlight: 'Syntax',
       openAtLine: 'Open line {line}',
       dragHint: 'Drag to resize the two sections',
     }
@@ -629,32 +623,34 @@ window.__ModuleLoader__.load({
 
     /**
      * Read the persisted diff view preferences.
-     * @returns {{ split: boolean, changesOnly: boolean, syntax: boolean }} options.
+     * @returns {{ split: boolean, changesOnly: boolean }} options.
      */
     function readDiffOptions() {
       try {
         if (typeof window === 'undefined' || window.localStorage == null) {
-          return { split: false, changesOnly: false, syntax: true }
+          return { split: false, changesOnly: false }
         }
         const raw = JSON.parse(window.localStorage.getItem(DIFF_OPTIONS_KEY) ?? '{}')
         return {
           split: raw !== null && typeof raw === 'object' && raw.split === true,
           changesOnly: raw !== null && typeof raw === 'object' && raw.changesOnly === true,
-          syntax: raw === null || typeof raw !== 'object' || raw.syntax !== false,
         }
       } catch {
-        return { split: false, changesOnly: false, syntax: true }
+        return { split: false, changesOnly: false }
       }
     }
 
     /**
      * Persist the diff view preferences.
-     * @param {{ split: boolean, changesOnly: boolean, syntax: boolean }} options - current options.
+     * @param {{ split: boolean, changesOnly: boolean }} options - current options.
      */
     function writeDiffOptions(options) {
       try {
         if (typeof window === 'undefined' || window.localStorage == null) return
-        window.localStorage.setItem(DIFF_OPTIONS_KEY, JSON.stringify(options))
+        window.localStorage.setItem(
+          DIFF_OPTIONS_KEY,
+          JSON.stringify({ split: options.split, changesOnly: options.changesOnly }),
+        )
       } catch {
         // A blocked storage area only loses the preference.
       }
@@ -1538,21 +1534,15 @@ window.__ModuleLoader__.load({
         image !== null &&
         ((image.before !== null && image.before !== undefined) ||
           (image.after !== null && image.after !== undefined))
-      // Prefer the picture whenever the change has no text hunk to read. The
-      // Host only advertises sides that really are pictures, so a pure image
-      // rename or a mode-only change also lands on the preview; a text file
-      // renamed to `.png` has no picture sides and keeps its meta/text view.
-      const hasTextDiff = data !== null && data.hasHunks === true
-      const [imageMode, setImageMode] = React.useState(null)
-      React.useEffect(() => setImageMode(null), [file.path, view.rev])
-      const showImage = imageAvailable && (imageMode === null ? !hasTextDiff : imageMode === 'image')
+      // The Host only advertises sides that really are pictures, so an image
+      // file always opens as its preview; everything else keeps the text diff.
       const hasChanges = lines.some((line) => line.type === 'add' || line.type === 'del')
       const visible = options.changesOnly ? lines.filter((line) => line.type !== 'ctx') : lines
       const shownLines = visible.length > DIFF_RENDER_LINES ? visible.slice(0, DIFF_RENDER_LINES) : visible
       const lineTruncated = visible.length > DIFF_RENDER_LINES
       const renderText = (line) => {
         if (line.type === 'meta' || line.type === 'hunk') return line.text === '' ? ' ' : line.text
-        return codeSegments(line.text, line.mark, options.syntax ? tokenizeLine(line.text, language) : [])
+        return codeSegments(line.text, line.mark, tokenizeLine(line.text, language))
       }
       const openAt = (value) => {
         if (!openable || value === '' || value === null || value === undefined) return null
@@ -1575,7 +1565,7 @@ window.__ModuleLoader__.load({
           h('div', { className: 'dshgit-error' }, message(t, 'diffError', { message: state.error })),
           h('button', { type: 'button', className: 'dshgit-retry', onClick: onReload }, t('retry')),
         )
-      } else if (showImage) {
+      } else if (imageAvailable) {
         content = h(ImagePreview, { image, cwd, file, rev: view.rev, t })
       } else if (data !== null && data.binary === true) {
         content = h('div', { className: 'dshgit-empty' }, t('diffBinary'))
@@ -1662,70 +1652,36 @@ window.__ModuleLoader__.load({
         }
       }
 
-      const tools = []
-      if (imageAvailable) {
-        tools.push(
-          h(
-            'button',
-            {
-              key: 'image',
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': showImage,
-              onClick: () => setImageMode(showImage ? 'diff' : 'image'),
-            },
-            t('imageView'),
-          ),
-          h(
-            'button',
-            {
-              key: 'text',
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': !showImage,
-              onClick: () => setImageMode('diff'),
-            },
-            t('textView'),
-          ),
-        )
-      }
-      if (!showImage) {
-        tools.push(
-          h(
-            'button',
-            {
-              key: 'split',
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': options.split,
-              onClick: () => onOptions({ ...options, split: !options.split }),
-            },
-            t('splitView'),
-          ),
-          h(
-            'button',
-            {
-              key: 'changes',
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': options.changesOnly,
-              onClick: () => onOptions({ ...options, changesOnly: !options.changesOnly }),
-            },
-            t('changesOnly'),
-          ),
-          h(
-            'button',
-            {
-              key: 'syntax',
-              type: 'button',
-              className: 'dshgit-modebtn',
-              'aria-pressed': options.syntax,
-              onClick: () => onOptions({ ...options, syntax: !options.syntax }),
-            },
-            t('syntaxHighlight'),
-          ),
-        )
-      }
+      // Pictures replace the whole body, so the text controls disappear with it.
+      const tools =
+        imageAvailable || state.phase !== 'ready'
+          ? null
+          : h(
+              'div',
+              { className: 'dshgit-difftools' },
+              h(
+                'button',
+                {
+                  key: 'split',
+                  type: 'button',
+                  className: 'dshgit-modebtn',
+                  'aria-pressed': options.split,
+                  onClick: () => onOptions({ ...options, split: !options.split }),
+                },
+                t('splitView'),
+              ),
+              h(
+                'button',
+                {
+                  key: 'changes',
+                  type: 'button',
+                  className: 'dshgit-modebtn',
+                  'aria-pressed': options.changesOnly,
+                  onClick: () => onOptions({ ...options, changesOnly: !options.changesOnly }),
+                },
+                t('changesOnly'),
+              ),
+            )
 
       return h(
         'div',
@@ -1776,7 +1732,7 @@ window.__ModuleLoader__.load({
             h(RefreshGlyph, {}),
           ),
         ),
-        h('div', { className: 'dshgit-difftools' }, tools),
+        tools,
         content,
       )
     }
@@ -3435,7 +3391,7 @@ window.__ModuleLoader__.load({
       '.dshgit-diffline[data-t=del]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent)}',
       '.dshgit-diffline[data-t=hunk]{color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);padding:2px 0}',
       '.dshgit-diffline[data-t=meta]{color:var(--dsw-alias-label-tertiary)}',
-      '.dshgit-difftools{flex:none;display:flex;gap:4px;padding:4px 8px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
+      '.dshgit-difftools{flex:none;display:flex;justify-content:flex-end;gap:4px;padding:4px 8px;border-bottom:.5px solid var(--dsw-alias-border-l3,var(--dsw-alias-border-l1))}',
       '.dshgit-modebtn{height:20px;padding:0 7px;border:.5px solid var(--dsw-alias-border-l2,var(--dsw-alias-border-l1));border-radius:4px;background:0 0;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:10px;cursor:pointer}',
       '.dshgit-modebtn[aria-pressed=true]{color:var(--dsw-alias-brand-primary);border-color:currentColor;background:color-mix(in srgb,currentColor 10%,transparent)}',
       '.dshgit-imagebody{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding:8px;align-content:start}',
